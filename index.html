@@ -230,12 +230,10 @@ body::before{
   display:flex;
   position:fixed;left:0;right:0;bottom:0;
   transition:top 0.32s ease;
-  /* iOS Safari fix: ensure map container never collapses */
   min-height:200px;
   -webkit-transform:translateZ(0);
   transform:translateZ(0);
 }
-
 /* ─── SIDEBAR ───────────────────────────────────────────────────── */
 #sidebar{
   width:340px;flex-shrink:0;
@@ -307,7 +305,7 @@ body::before{
 
 /* ─── MAP ───────────────────────────────────────────────────────── */
 #mapwrap{flex:1;position:relative;overflow:hidden}
-#map{width:100%;height:100%}
+#map{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
 .leaflet-container{font-family:'Nunito',sans-serif !important}
 .leaflet-popup-content-wrapper{border-radius:var(--rl) !important;box-shadow:var(--shadow-lg) !important;border:1px solid var(--border) !important;padding:0 !important;overflow:hidden}
 .leaflet-popup-content{margin:0 !important;width:230px !important}
@@ -671,9 +669,9 @@ body::before{
   .pill{font-size:12px;padding:5px 11px}
   .fb-arrow{width:26px}
 
-  /* Map takes full width and explicit height on mobile */
+  /* Map takes full width and fills container on mobile */
   #mapwrap{width:100%;flex:1}
-  #map{width:100%;height:100%;min-height:300px}
+  #map{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
 
   /* Footer strip - compact */
   #footstrip{font-size:12px;padding:7px 12px}
@@ -1533,7 +1531,7 @@ function renderApPlaces(body){
       <button class="ap-btn primary" onclick="apTab('add',document.querySelectorAll('.ap-tab')[1])">+ Add new</button>
     </div>
     <div class="ap-list">
-      ${PLACES.map(p=>`
+      ${[...PLACES].sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`
         <div class="ap-item" data-id="${p.id}">
           <div class="ap-item-emoji">${p.emoji}</div>
           <div class="ap-item-info">
@@ -1568,12 +1566,11 @@ function renderApForm(body){
       <div class="fg-row">
         <div class="fg" style="flex:0 0 auto">
           <label>Emoji icon</label>
-          <div id="af-emoji-display" style="width:52px;height:52px;font-size:28px;border:1.5px solid var(--border-m);border-radius:var(--r);background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s" onclick="document.getElementById('emoji-picker').classList.toggle('open')">${p?p.emoji:"🌟"}</div>
+          <div id="af-emoji-display" style="width:52px;height:52px;font-size:28px;border:1.5px solid var(--border-m);border-radius:var(--r);background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s" id="af-emoji-display">${p?p.emoji:"🌟"}</div>
           <input type="hidden" id="af-emoji" value="${p?p.emoji:"🌟"}">
         </div>
         <div class="fg"><label>Name *</label><input id="af-name" type="text" value="${p?p.name:""}" placeholder="Place name"></div>
       </div>
-      <!-- Emoji picker grid -->
       <div id="emoji-picker">
         ${[
           {label:"⭐ Suggested", emojis:["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","☕","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔","🥾","🏊","🐾","🦆","🌲","🎭"]},
@@ -1587,7 +1584,7 @@ function renderApForm(body){
           <div style="margin-bottom:8px">
             <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--navy-l);margin-bottom:4px">${group.label}</div>
             <div style="display:flex;flex-wrap:wrap;gap:3px">
-              ${group.emojis.map(e=>`<button type="button" onclick="pickEmoji('${e}')" style="width:34px;height:34px;font-size:20px;border:1.5px solid ${p&&p.emoji===e?'var(--orange)':'var(--border)'};border-radius:6px;background:${p&&p.emoji===e?'var(--orange-p)':'white'};cursor:pointer;transition:all 0.1s;display:flex;align-items:center;justify-content:center" id="epick-${e}">${e}</button>`).join("")}
+              ${group.emojis.map(e=>`<button type="button" data-emoji="${encodeURIComponent(e)}" class="epick-btn" style="width:34px;height:34px;font-size:20px;border:1.5px solid var(--border);border-radius:6px;background:white;cursor:pointer;transition:all 0.1s;display:flex;align-items:center;justify-content:center">${e}</button>`).join("")}
             </div>
           </div>`).join("")}
       </div>
@@ -1622,6 +1619,29 @@ function renderApForm(body){
         <button class="ap-btn primary" onclick="apSavePlace()">✓ ${p?"Save changes":"Add place"}</button>
       </div>
     </div>`;
+
+  // Wire up emoji picker via event listeners (not inline onclick — emojis break HTML attributes)
+  const display = body.querySelector("#af-emoji-display");
+  const picker = body.querySelector("#emoji-picker");
+  if(display && picker){
+    display.addEventListener("click", ()=> picker.classList.toggle("open"));
+    picker.querySelectorAll(".epick-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const e = decodeURIComponent(btn.dataset.emoji);
+        document.getElementById("af-emoji").value = e;
+        display.textContent = e;
+        picker.classList.remove("open");
+        picker.querySelectorAll(".epick-btn").forEach(b=>{ b.style.borderColor="var(--border)"; b.style.background="white"; });
+        btn.style.borderColor = "var(--orange)";
+        btn.style.background = "var(--orange-p)";
+      });
+    });
+    // Highlight current emoji
+    if(p && p.emoji){
+      const cur = [...picker.querySelectorAll(".epick-btn")].find(b=>decodeURIComponent(b.dataset.emoji)===p.emoji);
+      if(cur){ cur.style.borderColor="var(--orange)"; cur.style.background="var(--orange-p)"; }
+    }
+  }
 }
 
 async function apSavePlace(){
@@ -1934,22 +1954,6 @@ function apDeletePost(id){
   POSTS = POSTS.filter(p=>p.id!==id);
   if(recOpen) renderRec();
   renderApPosts(document.getElementById("ap-body"));
-}
-
-// ─── EMOJI PICKER ────────────────────────────────────────────────────────────
-function pickEmoji(e){
-  document.getElementById("af-emoji").value = e;
-  const display = document.getElementById("af-emoji-display");
-  if(display) display.textContent = e;
-  const picker = document.getElementById("emoji-picker");
-  if(picker) picker.classList.remove("open");
-  // Highlight selected button
-  document.querySelectorAll("[id^='epick-']").forEach(b=>{
-    b.style.borderColor = "var(--border)";
-    b.style.background = "white";
-  });
-  const btn = document.getElementById("epick-"+e);
-  if(btn){ btn.style.borderColor="var(--orange)"; btn.style.background="var(--orange-p)"; }
 }
 
 // ─── FILTER BAR SCROLL ARROWS ─────────────────────────────────────────────────
