@@ -166,16 +166,21 @@ body::before{
   position:sticky;top:60px;z-index:900;
   background:rgba(245,242,236,0.97);backdrop-filter:blur(8px);
   border-bottom:1px solid var(--border);
-  position:sticky;
+  display:flex;align-items:center;
 }
-#filterbar-wrap::after{
-  content:'';position:absolute;top:0;right:0;bottom:0;width:48px;
-  background:linear-gradient(to right, transparent, rgba(245,242,236,0.97));
-  pointer-events:none;z-index:1;
+.fb-arrow{
+  flex-shrink:0;width:32px;height:52px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--navy-l);background:rgba(245,242,236,0.97);
+  border:none;font-size:14px;transition:all 0.15s;
+  opacity:0;pointer-events:none;
 }
+.fb-arrow.visible{opacity:1;pointer-events:all}
+.fb-arrow:hover{color:var(--navy)}
+.fb-arrow-left{border-right:1px solid var(--border)}
+.fb-arrow-right{border-left:1px solid var(--border)}
 #filterbar{
-  top:0;z-index:900;
-  height:52px;display:flex;align-items:center;gap:8px;padding:0 20px;
+  flex:1;height:52px;display:flex;align-items:center;gap:8px;padding:0 12px;
   overflow-x:auto;-webkit-overflow-scrolling:touch;
   scrollbar-width:none;
 }
@@ -225,6 +230,10 @@ body::before{
   display:flex;
   position:fixed;left:0;right:0;bottom:0;
   transition:top 0.32s ease;
+  /* iOS Safari fix: ensure map container never collapses */
+  min-height:200px;
+  -webkit-transform:translateZ(0);
+  transform:translateZ(0);
 }
 
 /* ─── SIDEBAR ───────────────────────────────────────────────────── */
@@ -699,6 +708,7 @@ body::before{
 
 <!-- FILTER BAR -->
 <div id="filterbar-wrap">
+<button class="fb-arrow fb-arrow-left" id="fb-left" onclick="scrollFilters(-1)">‹</button>
 <div id="filterbar">
   <button class="pill active" data-f="all"        onclick="toggleFilter('all',this)">🗺 All</button>
   <button class="pill"        data-f="park"        onclick="toggleFilter('park',this)">🌲 Parks</button>
@@ -726,6 +736,7 @@ body::before{
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
     </button>
   </div>
+<button class="fb-arrow fb-arrow-right" id="fb-right" onclick="scrollFilters(1)">›</button>
 </div>
 
 <!-- ZIP BAR -->
@@ -974,6 +985,8 @@ async function fetchFromAirtable(){
     PLACES = allRecords.filter(r=>r.fields.Name).map(recordToPlace);
     clearMapMessage();
     renderAll();
+    // iOS Safari fix: force map to recalculate its size after data loads
+    setTimeout(()=>{ if(map) map.invalidateSize(); }, 200);
   } catch(e){
     showMapMessage("⚠️ Couldn't load listings. Check your token in Admin settings. ("+e.message+")");
   }
@@ -1914,6 +1927,27 @@ function pickEmoji(e){
   if(btn){ btn.style.borderColor="var(--orange)"; btn.style.background="var(--orange-p)"; }
 }
 
+// ─── FILTER BAR SCROLL ARROWS ─────────────────────────────────────────────────
+function scrollFilters(dir){
+  const fb = document.getElementById("filterbar");
+  fb.scrollBy({left: dir * 200, behavior:"smooth"});
+}
+function updateFilterArrows(){
+  const fb = document.getElementById("filterbar");
+  if(!fb) return;
+  const left = document.getElementById("fb-left");
+  const right = document.getElementById("fb-right");
+  if(left) left.classList.toggle("visible", fb.scrollLeft > 10);
+  if(right) right.classList.toggle("visible", fb.scrollLeft < fb.scrollWidth - fb.clientWidth - 10);
+}
+window.addEventListener("load",()=>{
+  const fb = document.getElementById("filterbar");
+  if(fb){
+    fb.addEventListener("scroll", updateFilterArrows);
+    setTimeout(updateFilterArrows, 300);
+  }
+});
+
 // ─── MAP INIT ─────────────────────────────────────────────────────────────────
 // setAppTop must be global so toggleHero and toggleZip can call it
 function setAppTop(){
@@ -1931,7 +1965,11 @@ function setAppTop(){
 
 window.addEventListener("load",()=>{
   setAppTop();
-  window.addEventListener("resize", setAppTop);
+  // iOS Safari is slow to report correct heights — retry a few times
+  setTimeout(setAppTop, 100);
+  setTimeout(setAppTop, 500);
+  setTimeout(()=>{ setAppTop(); if(map) map.invalidateSize(); }, 1000);
+  window.addEventListener("resize", ()=>{ setAppTop(); updateFilterArrows(); });
 
   map=L.map("map",{center:[45.485,-122.800],zoom:12,zoomControl:true});
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
