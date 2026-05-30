@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Little PDX — Kids Activities in Beaverton & Portland</title>
+<meta name="description" content="Discover the best parks, playgrounds, restaurants, and kids classes in Beaverton and the Portland metro area.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ─── Reset ─────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --orange:#E8622A;--orange-d:#C94E1A;--orange-p:#FDF0E8;
+  --teal:#2D6A4F;--teal-d:#1B4332;--teal-p:#D8F3DC;
+  --yellow:#D4A843;--yellow-p:#FDF6E3;
+  --navy:#1C2B1A;--navy-m:#3D5C3A;--navy-l:#7A9E76;
+  --sand:#F5F2EC;--sand-d:#EAE5DA;--sand-dd:#D9D2C5;
+  --white:#FDFCF9;
+  --pine:#1B3A2D;--pine-m:#2D5A3D;--pine-l:#4A8B5C;
+  --stone:#8C7B6B;--stone-l:#C4B8A8;
+  --mist:#EEF3EE;--mist-d:#D4E0D4;
+  --border:rgba(28,43,26,0.1);--border-m:rgba(28,43,26,0.18);
+  --shadow-sm:0 1px 4px rgba(0,0,0,0.07);
+  --shadow-md:0 4px 20px rgba(0,0,0,0.09),0 1px 4px rgba(0,0,0,0.05);
+  --shadow-lg:0 12px 48px rgba(0,0,0,0.13),0 4px 16px rgba(0,0,0,0.06);
+  --r:10px;--rl:16px;--rxl:24px;
+}
+html,body{height:100%;font-family:'Nunito',sans-serif;background:var(--sand);color:var(--navy);font-size:15px;line-height:1.55}
+button,input,select,textarea{font-family:'Nunito',sans-serif}
+
+/* PNW texture overlay on body */
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(45,106,79,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(232,98,42,0.04) 0%, transparent 60%);
+}
+
+/* ─── NAV ───────────────────────────────────────────────────────── */
+#nav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  height:60px;display:flex;align-items:center;gap:14px;padding:0 20px;
+  background:rgba(245,242,236,0.95);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{
+  display:flex;align-items:center;gap:8px;text-decoration:none;flex-shrink:0;
+  font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--navy);
+  letter-spacing:-0.5px;
+}
+.logo-dot{
+  width:32px;height:32px;border-radius:50%;background:var(--pine);
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  box-shadow:0 2px 8px rgba(27,58,45,0.35);
+}
+.nav-search{
+  flex:1;max-width:300px;display:flex;align-items:center;gap:8px;
+  background:var(--white);border:1.5px solid var(--border);border-radius:99px;
+  padding:7px 15px;transition:border-color 0.2s;
+}
+.nav-search:focus-within{border-color:var(--orange)}
+.nav-search input{border:none;background:transparent;outline:none;font-size:13px;color:var(--navy);width:100%}
+.nav-search input::placeholder{color:var(--navy-l)}
+.nav-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 16px;
+  border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;
+  transition:all 0.15s;border:none;white-space:nowrap;
+}
+.btn-outline{background:transparent;border:1.5px solid var(--border-m);color:var(--navy)}
+.btn-outline:hover{background:var(--sand-d);border-color:var(--navy-l)}
+.btn-orange{background:var(--orange);color:white;box-shadow:0 2px 8px rgba(255,107,53,0.3)}
+.btn-orange:hover{background:var(--orange-d);transform:translateY(-1px);box-shadow:0 4px 12px rgba(255,107,53,0.4)}
+.btn-teal{background:var(--teal);color:white;box-shadow:0 2px 8px rgba(0,137,123,0.3)}
+.btn-teal:hover{background:var(--teal-d)}
+.btn-sm{padding:6px 13px;font-size:12px}
+
+/* ─── HERO BANNER ───────────────────────────────────────────────── */
+#hero-banner{
+  margin-top:60px;background:var(--mist);
+  border-bottom:1px solid var(--border);
+}
+.hero-inner{
+  display:flex;align-items:center;gap:0;
+  max-height:220px;overflow:hidden;
+}
+.hero-left{
+  flex:1;padding:28px 28px 20px;min-width:0;
+}
+.hero-eyebrow{
+  font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.09em;
+  color:var(--pine-m);margin-bottom:6px;
+}
+.hero-title{
+  font-family:'Playfair Display',serif;font-size:clamp(26px,4vw,42px);
+  font-weight:900;color:var(--pine);letter-spacing:-1px;line-height:1;
+  margin-bottom:8px;
+}
+.hero-tagline{
+  font-size:clamp(12px,1.5vw,15px);color:var(--navy-m);
+  line-height:1.5;margin-bottom:16px;max-width:400px;
+}
+.hero-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn-pine{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 18px;
+  border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;
+  background:var(--pine);color:white;border:none;
+  box-shadow:0 2px 8px rgba(27,58,45,0.3);transition:all 0.15s;
+}
+.btn-pine:hover{background:var(--teal-d);transform:translateY(-1px)}
+.btn-ghost-pine{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 18px;
+  border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;
+  background:transparent;color:var(--pine);border:1.5px solid var(--pine-m);
+  transition:all 0.15s;
+}
+.btn-ghost-pine:hover{background:var(--mist-d)}
+.hero-right{
+  width:320px;flex-shrink:0;overflow:hidden;
+}
+.hero-mountain svg{width:100%;height:auto;display:block}
+.hero-adstrip{
+  background:var(--sand-d);border-top:1px solid var(--border);
+  padding:10px 28px;display:flex;align-items:center;gap:12px;
+}
+.adstrip-icon{font-size:16px;flex-shrink:0}
+.adstrip-text{font-size:12px;color:var(--navy-m);flex:1;line-height:1.5}
+.adstrip-text strong{color:var(--pine);font-weight:700}
+.adstrip-link{
+  font-size:12px;font-weight:700;color:var(--pine-m);
+  background:none;border:none;cursor:pointer;white-space:nowrap;
+  text-decoration:underline;text-underline-offset:2px;
+  font-family:'Nunito',sans-serif;transition:color 0.15s;
+}
+.adstrip-link:hover{color:var(--pine)}
+
+/* ─── FILTER BAR ────────────────────────────────────────────────── */
+#filterbar{
+  position:sticky;top:60px;left:0;right:0;z-index:900;
+  height:52px;display:flex;align-items:center;gap:8px;padding:0 20px;
+  background:rgba(245,242,236,0.97);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);overflow-x:auto;
+}
+#filterbar::-webkit-scrollbar{display:none}
+.pill{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 14px;
+  border-radius:99px;border:1.5px solid var(--border-m);background:var(--white);
+  color:var(--navy-m);font-size:13px;font-weight:600;cursor:pointer;
+  transition:all 0.15s;white-space:nowrap;flex-shrink:0;user-select:none;
+}
+.pill:hover{border-color:var(--orange);color:var(--orange)}
+.pill.active{background:var(--orange);border-color:var(--orange);color:white}
+.pill-sep{width:1px;height:26px;background:var(--border);flex-shrink:0;margin:0 2px}
+.view-btns{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+.vbtn{
+  width:36px;height:36px;border-radius:var(--r);border:1.5px solid var(--border-m);
+  background:var(--white);color:var(--navy-m);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all 0.15s;
+}
+.vbtn.active{background:var(--navy);color:white;border-color:var(--navy)}
+.vbtn:hover:not(.active){background:var(--sand-d)}
+
+/* ─── ZIP JUMP BAR ──────────────────────────────────────────────── */
+#zipbar{
+  position:fixed;top:112px;left:0;right:0;z-index:800;
+  background:var(--teal-p);border-bottom:1px solid rgba(0,137,123,0.2);
+  padding:7px 20px;display:flex;align-items:center;gap:10px;
+  transform:translateY(-100%);opacity:0;pointer-events:none;
+  transition:all 0.25s ease;
+}
+#zipbar.open{transform:translateY(0);opacity:1;pointer-events:all}
+#zipbar label{font-size:13px;font-weight:600;color:var(--teal-d)}
+#zip-input{
+  padding:6px 12px;border-radius:99px;border:1.5px solid rgba(0,137,123,0.35);
+  background:white;font-size:13px;width:110px;outline:none;color:var(--navy);
+  transition:border-color 0.15s;
+}
+#zip-input:focus{border-color:var(--teal)}
+#zip-input::placeholder{color:var(--navy-l)}
+#zip-go{background:var(--teal);color:white;border:none;padding:6px 14px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s}
+#zip-go:hover{background:var(--teal-d)}
+#zip-close{background:none;border:none;color:var(--teal-d);cursor:pointer;font-size:18px;margin-left:auto;line-height:1}
+#zip-status{font-size:12px;color:var(--teal-d)}
+
+/* ─── MAIN LAYOUT ───────────────────────────────────────────────── */
+#app{display:flex;position:fixed;top:60px;left:0;right:0;bottom:0;transition:top 0.25s}
+#app.hasHero{top:calc(60px + var(--hero-h, 280px) + 52px)}
+#app.zipopen{top:calc(60px + var(--hero-h, 280px) + 52px + 36px)}
+
+/* ─── SIDEBAR ───────────────────────────────────────────────────── */
+#sidebar{
+  width:340px;flex-shrink:0;
+  display:flex;flex-direction:column;
+  background:var(--sand);border-right:1px solid var(--border);
+  overflow:hidden;
+}
+.sb-head{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.sb-count{font-size:12px;color:var(--navy-l);font-weight:600}
+.sb-sort{font-size:12px;color:var(--navy-m);border:none;background:transparent;outline:none;cursor:pointer;font-weight:600}
+#place-list{overflow-y:auto;flex:1}
+#place-list::-webkit-scrollbar{width:3px}
+#place-list::-webkit-scrollbar-thumb{background:var(--sand-dd);border-radius:99px}
+
+/* Sponsored card in sidebar */
+.sb-sponsor{
+  margin:10px 12px;padding:12px 14px;
+  background:var(--yellow-p);border:1.5px solid rgba(255,209,102,0.5);
+  border-radius:var(--rl);cursor:pointer;transition:border-color 0.15s;
+}
+.sb-sponsor:hover{border-color:var(--yellow)}
+.sp-eyebrow{font-size:10px;font-weight:700;color:#9B7A00;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+.sb-sponsor h4{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.sb-sponsor p{font-size:11px;color:var(--navy-m);line-height:1.45}
+.sb-sponsor-cta{font-size:11px;color:var(--teal);font-weight:700;margin-top:6px;display:inline-block}
+
+/* Place cards */
+.pcard{
+  padding:12px 14px;border-bottom:1px solid var(--border);
+  display:flex;gap:11px;cursor:pointer;transition:background 0.1s;
+}
+.pcard:hover{background:var(--sand-d)}
+.pcard.sel{background:var(--orange-p);border-left:3px solid var(--orange);padding-left:11px}
+.pcard.feat{border-left:3px solid var(--yellow);padding-left:11px;background:rgba(255,209,102,0.06)}
+.pcard.sel.feat{background:var(--orange-p);border-left-color:var(--orange)}
+.pthumb{
+  width:70px;height:70px;border-radius:var(--r);flex-shrink:0;
+  background:var(--sand-dd);display:flex;align-items:center;justify-content:center;
+  font-size:28px;border:1px solid var(--border);overflow:hidden;
+}
+.pthumb img{width:100%;height:100%;object-fit:cover}
+.pinfo{flex:1;min-width:0}
+.ptop{display:flex;align-items:flex-start;gap:5px;margin-bottom:2px}
+.pname{font-size:13px;font-weight:700;color:var(--navy);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feat-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--yellow-p);color:#7A5C00;border:1px solid rgba(255,209,102,0.6);flex-shrink:0}
+.prating{font-size:11px;color:var(--navy-m);display:flex;align-items:center;gap:4px;margin-bottom:5px}
+.stars{color:var(--orange);letter-spacing:-1px;font-size:12px}
+.ptags{display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid transparent}
+.tag-park      {background:var(--teal-p);   color:#005A52;border-color:rgba(0,137,123,0.2)}
+.tag-bigkids   {background:#E8F1FE;         color:#1A4FA0;border-color:rgba(26,79,160,0.2)}
+.tag-littlekids{background:var(--orange-p); color:#B34000;border-color:rgba(255,107,53,0.2)}
+.tag-food      {background:#FCEAEA;         color:#9B2020;border-color:rgba(155,32,32,0.2)}
+.tag-classes   {background:#F0EAFE;         color:#5230A0;border-color:rgba(82,48,160,0.2)}
+.tag-store     {background:#FDF0FF;         color:#6B2F8A;border-color:rgba(107,47,138,0.2)}
+.tag-splashpad {background:#E0F4FF;         color:#005F8A;border-color:rgba(0,95,138,0.2)}
+.tag-misc      {background:#F5F5F0;         color:#555548;border-color:rgba(85,85,72,0.2)}
+.tag-free      {background:#EDFFF5;         color:#0A6B3A;border-color:rgba(10,107,58,0.2)}
+
+/* ─── MAP ───────────────────────────────────────────────────────── */
+#mapwrap{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%}
+.leaflet-container{font-family:'Nunito',sans-serif !important}
+.leaflet-popup-content-wrapper{border-radius:var(--rl) !important;box-shadow:var(--shadow-lg) !important;border:1px solid var(--border) !important;padding:0 !important;overflow:hidden}
+.leaflet-popup-content{margin:0 !important;width:230px !important}
+.leaflet-popup-tip-container{display:none}
+.popup-img{width:100%;height:95px;background:var(--sand-dd);display:flex;align-items:center;justify-content:center;font-size:38px;border-bottom:1px solid var(--border)}
+.popup-body{padding:12px}
+.popup-name{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.popup-meta{font-size:11px;color:var(--navy-m);margin-bottom:7px}
+.popup-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.popup-btn{width:100%;padding:8px;font-size:12px;font-weight:700;background:var(--orange);color:white;border:none;border-radius:var(--r);cursor:pointer;font-family:'Nunito',sans-serif;transition:background 0.15s}
+.popup-btn:hover{background:var(--orange-d)}
+
+/* ─── GRID VIEW ─────────────────────────────────────────────────── */
+#gridview{
+  display:none;flex:1;overflow-y:auto;padding:20px;
+  grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;
+  align-content:start;background:var(--sand);
+}
+#gridview.on{display:grid}
+.gcard{
+  background:white;border:1.5px solid var(--border);border-radius:var(--rl);
+  overflow:hidden;cursor:pointer;transition:all 0.18s;box-shadow:var(--shadow-sm);
+}
+.gcard:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.gcard.feat{border-color:rgba(255,209,102,0.5)}
+.gcard-img{width:100%;height:145px;background:var(--sand-dd);display:flex;align-items:center;justify-content:center;font-size:46px;border-bottom:1px solid var(--border);overflow:hidden}
+.gcard-img img{width:100%;height:100%;object-fit:cover}
+.gcard-body{padding:13px}
+.gcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:3px}
+.gcard-name{font-size:14px;font-weight:700;color:var(--navy)}
+.gcard-meta{font-size:11px;color:var(--navy-m);margin-bottom:7px;display:flex;align-items:center;gap:5px}
+.gcard-desc{font-size:12px;color:var(--navy-m);line-height:1.5;margin-bottom:8px}
+.gcard-foot{padding:9px 13px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+
+/* ─── DETAIL DRAWER ─────────────────────────────────────────────── */
+#drawer{
+  position:fixed;bottom:0;left:0;right:0;z-index:1200;
+  background:var(--sand);border-top:1px solid var(--border);
+  border-radius:24px 24px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,0.12);
+  transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.34,1.3,0.64,1);
+  max-height:82vh;overflow-y:auto;
+}
+#drawer.open{transform:translateY(0)}
+.dhandle{width:38px;height:4px;border-radius:99px;background:var(--sand-dd);margin:12px auto 0}
+#dcontent{padding:16px 24px 48px}
+.dgallery{display:flex;gap:8px;margin-bottom:18px;overflow-x:auto;padding-bottom:4px}
+.dgallery::-webkit-scrollbar{display:none}
+.dimg{
+  width:130px;height:95px;flex-shrink:0;border-radius:var(--rl);
+  background:var(--sand-dd);display:flex;align-items:center;justify-content:center;
+  font-size:34px;border:1px solid var(--border);overflow:hidden;
+}
+.dimg.big{font-size:50px;width:150px;height:110px}
+.dimg img{width:100%;height:100%;object-fit:cover}
+.dtitle{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--navy);margin-bottom:6px;letter-spacing:-0.3px;line-height:1.15}
+.dmeta{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.dtags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+.ddesc{font-size:14px;color:var(--navy-m);line-height:1.7;margin-bottom:18px}
+.dinfogrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.ichip{
+  display:flex;align-items:flex-start;gap:8px;
+  background:white;border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;
+}
+.ichip svg{flex-shrink:0;margin-top:1px;color:var(--teal)}
+.icht{font-size:12px}
+.ichl{font-weight:700;color:var(--navy);margin-bottom:1px}
+.ichv{color:var(--navy-m)}
+.dactions{display:flex;gap:10px}
+.dactionbtn{
+  flex:1;padding:12px;font-size:14px;font-weight:700;border-radius:var(--rl);
+  cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.15s;text-align:center;border:none;
+}
+.dab-orange{background:var(--orange);color:white}
+.dab-orange:hover{background:var(--orange-d)}
+.dab-outline{background:white;color:var(--navy);border:1.5px solid var(--border-m)}
+.dab-outline:hover{background:var(--sand-d)}
+#dclose{
+  position:absolute;top:14px;right:18px;width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--border);background:white;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  color:var(--navy-m);transition:all 0.15s;
+}
+#dclose:hover{background:var(--sand-d)}
+
+/* ─── FOOTER STRIP ──────────────────────────────────────────────── */
+#footstrip{
+  position:fixed;bottom:0;left:0;right:0;z-index:700;
+  background:var(--yellow-p);border-top:1px solid rgba(255,209,102,0.5);
+  padding:9px 20px;display:flex;align-items:center;gap:14px;
+  transition:transform 0.3s;
+}
+#footstrip.gone{transform:translateY(100%)}
+.fs-label{font-size:10px;font-weight:800;color:#7A5C00;text-transform:uppercase;letter-spacing:0.06em;flex-shrink:0}
+.fs-text{font-size:13px;color:var(--navy-m);flex:1}
+.fs-link{font-size:13px;color:var(--teal);font-weight:700;cursor:pointer;flex-shrink:0}
+.fs-x{background:none;border:none;color:var(--navy-l);cursor:pointer;font-size:17px;line-height:1;flex-shrink:0}
+
+/* ─── SUGGEST BTN ───────────────────────────────────────────────── */
+#suggestbtn{
+  position:fixed;bottom:50px;right:18px;z-index:900;
+  background:var(--orange);color:white;border:none;
+  padding:11px 18px;border-radius:99px;font-size:13px;font-weight:700;
+  cursor:pointer;box-shadow:0 4px 16px rgba(255,107,53,0.4);
+  display:flex;align-items:center;gap:7px;font-family:'Nunito',sans-serif;
+  transition:all 0.15s;
+}
+#suggestbtn:hover{background:var(--orange-d);transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,107,53,0.5)}
+
+/* ─── MODALS ────────────────────────────────────────────────────── */
+.overlay{
+  position:fixed;inset:0;z-index:2000;
+  background:rgba(26,43,60,0.55);backdrop-filter:blur(5px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;visibility:hidden;transition:all 0.2s;
+}
+.overlay.on{opacity:1;visibility:visible}
+.modal{
+  background:var(--sand);border-radius:var(--rxl);padding:28px;
+  width:100%;max-width:440px;box-shadow:var(--shadow-lg);
+  transform:translateY(14px);transition:transform 0.2s;max-height:90vh;overflow-y:auto;
+}
+.overlay.on .modal{transform:translateY(0)}
+.modal h3{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;margin-bottom:6px;color:var(--navy)}
+.modal p.sub{font-size:13px;color:var(--navy-m);margin-bottom:20px;line-height:1.55}
+.fg{margin-bottom:13px}
+.fg label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:5px}
+.fg input,.fg select,.fg textarea{
+  width:100%;padding:9px 13px;border:1.5px solid var(--border-m);
+  border-radius:var(--r);background:white;font-size:13px;
+  color:var(--navy);outline:none;transition:border-color 0.15s;
+  font-family:'Nunito',sans-serif;resize:none;
+}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--orange)}
+.fg textarea{height:80px}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-btns{display:flex;gap:10px;margin-top:20px}
+.modal-btns button{flex:1}
+.price-box{
+  text-align:center;background:white;border:1.5px solid var(--border);
+  border-radius:var(--rl);padding:18px;margin-bottom:18px;
+}
+.price-num{font-family:'Playfair Display',serif;font-size:40px;font-weight:900;color:var(--teal)}
+.price-period{font-size:14px;color:var(--navy-m)}
+.perks{list-style:none;font-size:13px;color:var(--navy-m);display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.perks li::before{content:"✦ ";color:var(--orange)}
+
+/* ─── ADMIN PANEL ───────────────────────────────────────────────── */
+#admin-overlay{
+  position:fixed;inset:0;z-index:3000;
+  background:rgba(26,43,60,0.65);backdrop-filter:blur(6px);
+  opacity:0;visibility:hidden;transition:all 0.2s;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+#admin-overlay.on{opacity:1;visibility:visible}
+#admin-panel{
+  background:white;width:100%;max-width:680px;border-radius:24px 24px 0 0;
+  max-height:92vh;overflow-y:auto;box-shadow:0 -12px 60px rgba(0,0,0,0.2);
+  transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1);
+}
+#admin-overlay.on #admin-panel{transform:translateY(0)}
+.ap-head{
+  padding:20px 24px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;
+  background:white;z-index:1;
+}
+.ap-head h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--navy)}
+.ap-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--navy-m);line-height:1}
+.ap-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 24px;background:white;position:sticky;top:72px;z-index:1}
+.ap-tab{
+  padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;
+  border-bottom:2.5px solid transparent;color:var(--navy-m);transition:all 0.15s;
+  background:none;border-top:none;border-left:none;border-right:none;
+}
+.ap-tab.on{color:var(--orange);border-bottom-color:var(--orange)}
+.ap-body{padding:24px}
+/* Places list in admin */
+.ap-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.ap-item{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  background:var(--sand);border:1px solid var(--border);border-radius:var(--rl);
+}
+.ap-item-emoji{font-size:24px;width:40px;text-align:center;flex-shrink:0}
+.ap-item-info{flex:1;min-width:0}
+.ap-item-name{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.ap-item-meta{font-size:11px;color:var(--navy-m);display:flex;align-items:center;gap:8px}
+.ap-item-actions{display:flex;gap:6px;flex-shrink:0}
+.ap-btn{padding:5px 12px;border-radius:99px;border:1px solid var(--border-m);background:white;font-size:11px;font-weight:700;cursor:pointer;color:var(--navy-m);transition:all 0.15s;font-family:'Nunito',sans-serif}
+.ap-btn:hover{background:var(--sand-d)}
+.ap-btn.danger{color:#C0392B;border-color:rgba(192,57,43,0.25)}
+.ap-btn.danger:hover{background:#FDECEA;border-color:#C0392B}
+.ap-btn.primary{background:var(--orange);color:white;border-color:var(--orange)}
+.ap-btn.primary:hover{background:var(--orange-d)}
+/* Add/Edit form */
+.ap-form{background:var(--sand);border:1px solid var(--border);border-radius:var(--rl);padding:18px}
+.ap-form h4{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:14px}
+.ap-section-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--navy-l);margin:14px 0 8px}
+/* Toggle group */
+.tag-toggles{display:flex;gap:6px;flex-wrap:wrap}
+.ttog{
+  padding:5px 13px;border-radius:99px;border:1.5px solid var(--border-m);
+  background:white;font-size:12px;font-weight:700;cursor:pointer;
+  color:var(--navy-m);transition:all 0.12s;user-select:none;
+}
+.ttog.on{background:var(--orange);border-color:var(--orange);color:white}
+/* Sponsor rows */
+.sp-row{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--sand);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;
+}
+.sp-row-content{flex:1;min-width:0}
+.sp-row-name{font-size:13px;font-weight:700;color:var(--navy)}
+.sp-row-meta{font-size:11px;color:var(--navy-m)}
+.sp-status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px}
+.sp-active{background:#D5F5E3;color:#1E8449}
+.sp-pending{background:#FEF9C3;color:#7D6608}
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.stat-card{background:var(--sand);border:1px solid var(--border);border-radius:var(--rl);padding:16px;text-align:center}
+.stat-num{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--orange);line-height:1}
+.stat-label{font-size:11px;font-weight:700;color:var(--navy-m);margin-top:4px}
+/* Suggestions list */
+.sug-row{
+  padding:12px 14px;background:var(--sand);border:1px solid var(--border);
+  border-radius:var(--r);margin-bottom:8px;
+}
+.sug-row-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.sug-row-name{font-size:13px;font-weight:700;color:var(--navy)}
+.sug-row-body{font-size:12px;color:var(--navy-m);line-height:1.5}
+.sug-row-actions{display:flex;gap:6px;margin-top:8px}
+
+/* ─── RECOMMENDED POSTS ─────────────────────────────────────────── */
+#rec-section{
+  background:var(--sand);border-top:1px solid var(--border);
+  padding:40px 24px 60px;
+}
+.rec-header{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  margin-bottom:24px;max-width:1100px;margin-inline:auto;
+}
+.rec-header h2{
+  font-family:'Playfair Display',serif;font-size:28px;font-weight:900;
+  color:var(--navy);letter-spacing:-0.3px;
+}
+.rec-header p{font-size:13px;color:var(--navy-l);margin-top:4px}
+.rec-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:18px;max-width:1100px;margin-inline:auto;
+}
+.rec-card{
+  background:white;border:1.5px solid var(--border);border-radius:var(--rl);
+  overflow:hidden;cursor:pointer;transition:all 0.18s;box-shadow:var(--shadow-sm);
+}
+.rec-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.rec-card-img{
+  width:100%;height:160px;background:var(--sand-dd);
+  display:flex;align-items:center;justify-content:center;font-size:52px;
+  border-bottom:1px solid var(--border);overflow:hidden;
+  position:relative;
+}
+.rec-card-img img{width:100%;height:100%;object-fit:cover}
+.rec-card-cat{
+  position:absolute;top:10px;left:10px;
+  font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;
+  padding:3px 9px;border-radius:99px;background:var(--orange);color:white;
+}
+.rec-card-body{padding:14px 16px}
+.rec-card-date{font-size:11px;color:var(--navy-l);margin-bottom:5px}
+.rec-card-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px;line-height:1.3}
+.rec-card-excerpt{font-size:12px;color:var(--navy-m);line-height:1.6;margin-bottom:10px}
+.rec-card-foot{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border)}
+.rec-card-author{font-size:11px;color:var(--navy-l);font-weight:600}
+.rec-card-read{font-size:12px;color:var(--orange);font-weight:700}
+.rec-empty{text-align:center;padding:40px;color:var(--navy-l);font-size:14px;grid-column:1/-1}
+
+/* Post detail overlay */
+#post-overlay{
+  position:fixed;inset:0;z-index:1500;
+  background:rgba(26,43,60,0.6);backdrop-filter:blur(5px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;visibility:hidden;transition:all 0.2s;
+}
+#post-overlay.on{opacity:1;visibility:visible}
+#post-modal{
+  background:var(--sand);border-radius:var(--rxl);
+  width:100%;max-width:600px;max-height:88vh;overflow-y:auto;
+  box-shadow:var(--shadow-lg);transform:translateY(14px);transition:transform 0.2s;
+}
+#post-overlay.on #post-modal{transform:translateY(0)}
+.pm-img{width:100%;height:200px;background:var(--sand-dd);display:flex;align-items:center;justify-content:center;font-size:64px;border-radius:var(--rxl) var(--rxl) 0 0;overflow:hidden}
+.pm-img img{width:100%;height:100%;object-fit:cover}
+.pm-body{padding:24px}
+.pm-cat{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--orange);margin-bottom:8px}
+.pm-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:var(--navy);margin-bottom:8px;line-height:1.2}
+.pm-meta{font-size:12px;color:var(--navy-l);margin-bottom:16px}
+.pm-content{font-size:14px;color:var(--navy-m);line-height:1.75;white-space:pre-wrap}
+.pm-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--navy-m);transition:all 0.15s}
+.pm-close:hover{background:var(--sand-d)}
+
+.noresults{padding:40px 20px;text-align:center}
+.noresults-em{font-size:42px;margin-bottom:12px}
+.noresults h4{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:5px}
+.noresults p{font-size:13px;color:var(--navy-m)}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────────── */
+@media(max-width:680px){
+  #sidebar{display:none}
+  #nav .btn-outline{display:none}
+  #suggestbtn{bottom:55px;right:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="#" class="nav-logo">
+    <span class="logo-dot">🗺</span>
+    Little PDX
+  </a>
+  <div class="nav-search">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="search" type="text" placeholder="Parks, food, classes…" autocomplete="off">
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-outline btn-sm" onclick="toggleRec()">📌 Recommended</button>
+    <button class="btn btn-outline btn-sm" onclick="toggleZip()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Change area
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="openAdmin()">⚙ Admin</button>
+    <button class="btn btn-orange btn-sm" onclick="openModal('sponsor-modal')">✦ Get featured</button>
+  </div>
+</nav>
+
+<!-- HERO BANNER -->
+<div id="hero-banner">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="hero-eyebrow">🌲 Beaverton & Portland Metro</div>
+      <h1 class="hero-title">Little PDX</h1>
+      <p class="hero-tagline">Your minimalist resource for kid-friendly adventures in the PDX area.</p>
+      <div class="hero-actions">
+        <button class="btn btn-pine" onclick="document.getElementById('filterbar').scrollIntoView({behavior:'smooth'})">Explore the map ↓</button>
+        <button class="btn btn-ghost-pine" onclick="openModal('suggest-modal')">Suggest a place</button>
+      </div>
+    </div>
+
+  </div>
+  <!-- Ad philosophy strip -->
+  <div class="hero-adstrip">
+    <span class="adstrip-icon">🤝</span>
+    <div class="adstrip-text">
+      <strong>On advertising:</strong> Little PDX is supported by local businesses, not ad networks. Any featured listing is hand-picked and relevant — a real place you might actually want to visit. That's it. No tracking, no pop-ups, no noise.
+    </div>
+    <button class="adstrip-link" onclick="openModal('advertise-modal')">List your business →</button>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div id="filterbar">
+  <button class="pill active" data-f="all"        onclick="toggleFilter('all',this)">🗺 All</button>
+  <button class="pill"        data-f="park"        onclick="toggleFilter('park',this)">🌲 Parks</button>
+  <button class="pill"        data-f="splashpad"   onclick="toggleFilter('splashpad',this)">💦 Splash pads</button>
+  <button class="pill"        data-f="bigkids"     onclick="toggleFilter('bigkids',this)">🏃 Big kids</button>
+  <button class="pill"        data-f="littlekids"  onclick="toggleFilter('littlekids',this)">👶 Little kids</button>
+  <button class="pill"        data-f="food"        onclick="toggleFilter('food',this)">🍕 Eat</button>
+  <button class="pill"        data-f="classes"     onclick="toggleFilter('classes',this)">🎨 Classes</button>
+  <button class="pill"        data-f="store"       onclick="toggleFilter('store',this)">🛍 Stores</button>
+  <button class="pill"        data-f="free"        onclick="toggleFilter('free',this)">🆓 Free</button>
+  <button class="pill"        data-f="misc"        onclick="toggleFilter('misc',this)">✨ Misc</button>
+  <div class="pill-sep"></div>
+  <div class="view-btns">
+    <button class="vbtn active" id="v-map" title="Map" onclick="setView('map')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+    </button>
+    <button class="vbtn" id="v-grid" title="Grid" onclick="setView('grid')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ZIP BAR -->
+<div id="zipbar">
+  <label for="zip-input">📍 Jump to zip code:</label>
+  <input id="zip-input" type="text" maxlength="5" placeholder="e.g. 97201" inputmode="numeric">
+  <button id="zip-go" onclick="goZip()">Go</button>
+  <span id="zip-status"></span>
+  <button id="zip-close" onclick="toggleZip()">✕</button>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div id="sidebar">
+    <div class="sb-head">
+      <span class="sb-count" id="sb-count">Loading…</span>
+      <select class="sb-sort" id="sb-sort" onchange="renderAll()">
+        <option value="rating">Top rated</option>
+        <option value="name">A – Z</option>
+        <option value="featured">Featured first</option>
+      </select>
+    </div>
+    <!-- Sponsored slot — swap content for real partner -->
+    <div class="sb-sponsor" onclick="openModal('sponsor-modal')">
+      <div class="sp-eyebrow">✦ Featured Partner</div>
+      <h4>Your business here</h4>
+      <p>Reach local families actively searching for activities and places to eat.</p>
+      <span class="sb-sponsor-cta">Learn about featured listings →</span>
+    </div>
+    <div id="place-list"></div>
+  </div>
+  <div id="mapwrap"><div id="map"></div></div>
+  <div id="gridview"></div>
+</div>
+
+<!-- DETAIL DRAWER -->
+<div id="drawer">
+  <div class="dhandle"></div>
+  <div id="dcontent"></div>
+  <button id="dclose" onclick="closeDrawer()">✕</button>
+</div>
+
+<!-- FOOTER STRIP -->
+<div id="footstrip">
+  <span class="fs-label">✦ Sponsor</span>
+  <span class="fs-text" id="fs-text"></span>
+  <span class="fs-link" onclick="openModal('sponsor-modal')">Learn more →</span>
+  <button class="fs-x" onclick="dismissFoot()" title="Dismiss">✕</button>
+</div>
+
+<!-- SUGGEST BTN -->
+<button id="suggestbtn" onclick="openModal('suggest-modal')">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  Suggest a place
+</button>
+
+<!-- SUGGEST A LISTING MODAL -->
+<div class="overlay" id="suggest-modal">
+  <div class="modal">
+    <h3>Suggest a listing 🌲</h3>
+    <p class="sub">Know a great spot that isn't on the map yet? We review every submission and add the good ones. We'll credit you if you leave your name!</p>
+    <div class="fg"><label>Place name *</label><input type="text" id="sg-name" placeholder="e.g. Tualatin Hills Nature Park"></div>
+    <div class="fg-row">
+      <div class="fg"><label>Category</label><select id="sg-cat"><option>Park</option><option>Splash Pad</option><option>Restaurant</option><option>Class / Activity</option><option>Store</option><option>Playground</option><option>Other</option></select></div>
+      <div class="fg"><label>Best for</label><select id="sg-age"><option>All ages</option><option>Little kids (0–5)</option><option>Big kids (6–12)</option><option>Both</option></select></div>
+    </div>
+    <div class="fg"><label>Address (helps us find it)</label><input type="text" id="sg-addr" placeholder="Street, City, OR"></div>
+    <div class="fg"><label>Why do you love it? *</label><textarea id="sg-why" placeholder="What makes it special? Tips for first-timers, best time to visit…"></textarea></div>
+    <div class="fg-row">
+      <div class="fg"><label>Your name (optional)</label><input type="text" id="sg-yourname" placeholder="First name is fine"></div>
+      <div class="fg"><label>Your email (optional)</label><input type="email" id="sg-email" placeholder="To notify you when it's live"></div>
+    </div>
+    <div style="background:var(--mist);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--navy-m);margin-bottom:4px">
+      📋 All suggestions go to our review queue — we'll check it out and add it to the map if it's a good fit.
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal('suggest-modal')">Cancel</button>
+      <button class="btn btn-pine" onclick="submitSuggest()">Send suggestion →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADVERTISE / GET FEATURED MODAL -->
+<div class="overlay" id="advertise-modal">
+  <div class="modal">
+    <h3>Work with Little PDX 🤝</h3>
+    <p class="sub">We keep advertising simple and honest. Featured partners are real local businesses we'd recommend ourselves. No ad networks, no tracking pixels — just a straightforward listing that puts you in front of local families.</p>
+    <div style="background:var(--mist);border:1px solid var(--mist-d);border-radius:var(--rl);padding:16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--pine-m);margin-bottom:10px">What you get</div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--navy-m)">
+        <div>🏅 &nbsp;Gold "Featured" badge + priority placement on map & list</div>
+        <div>🔄 &nbsp;Your message in the rotating site banner</div>
+        <div>📸 &nbsp;Up to 5 photos in your listing</div>
+        <div>📬 &nbsp;Mention in our monthly Recommended posts</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-family:'Playfair Display',serif;font-size:34px;font-weight:900;color:var(--pine)">$49<span style="font-size:15px;font-weight:400;font-family:'Nunito',sans-serif;color:var(--navy-l)">/month</span></div>
+      <div style="font-size:11px;color:var(--navy-l);margin-top:3px">Cancel anytime · Local Oregon businesses only · We reserve the right to decline</div>
+    </div>
+    <div class="fg"><label>Business name *</label><input type="text" id="adv-name" placeholder="Your business name"></div>
+    <div class="fg"><label>Contact email *</label><input type="email" id="adv-email" placeholder="you@yourbusiness.com"></div>
+    <div class="fg"><label>Website</label><input type="text" id="adv-web" placeholder="https://…"></div>
+    <div class="fg"><label>Tell us about your business</label><textarea id="adv-desc" placeholder="What do you offer families? Where are you located?"></textarea></div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal('advertise-modal')">Not now</button>
+      <button class="btn btn-pine" onclick="submitAdvertise()">Send inquiry →</button>
+    </div>
+  </div>
+</div>
+
+<!-- GET FEATURED (old sponsor modal — keep for backwards compat, redirect to advertise) -->
+<div class="overlay" id="sponsor-modal">
+  <div class="modal">
+    <h3>Work with Little PDX 🤝</h3>
+    <p class="sub">Redirecting you to our partner inquiry form…</p>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal('sponsor-modal')">Close</button>
+      <button class="btn btn-pine" onclick="closeModal('sponsor-modal');openModal('advertise-modal')">Open inquiry form →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="admin-overlay">
+  <div id="admin-panel">
+    <div class="ap-head">
+      <h2>⚙ Admin Panel</h2>
+      <button class="ap-close" onclick="closeAdmin()">✕</button>
+    </div>
+    <div class="ap-tabs">
+      <button class="ap-tab on" onclick="apTab('places',this)">Places</button>
+      <button class="ap-tab" onclick="apTab('add',this)">Add New</button>
+      <button class="ap-tab" onclick="apTab('posts',this)">Posts</button>
+      <button class="ap-tab" onclick="apTab('sponsors',this)">Sponsors</button>
+      <button class="ap-tab" onclick="apTab('suggestions',this)">Suggestions</button>
+      <button class="ap-tab" onclick="apTab('stats',this)">Stats</button>
+    </div>
+    <div class="ap-body" id="ap-body"></div>
+  </div>
+</div>
+
+<!-- RECOMMENDED POSTS SECTION -->
+<div id="rec-section" style="display:none">
+  <div class="rec-header">
+    <div>
+      <h2>📌 Recommended</h2>
+      <p>Handpicked tips, guides, and local finds from Little PDX</p>
+    </div>
+  </div>
+  <div class="rec-grid" id="rec-grid"></div>
+</div>
+
+<!-- POST DETAIL OVERLAY -->
+<div id="post-overlay">
+  <div id="post-modal" style="position:relative">
+    <button class="pm-close" onclick="closePost()">✕</button>
+    <div id="post-modal-content"></div>
+  </div>
+</div>
+
+
+<script>
+// ─── RECOMMENDED POSTS ────────────────────────────────────────────────────────
+// Add posts here or use Admin → Posts tab
+let POSTS = [
+  {id:1, title:"Best Splash Pads in Beaverton for Summer 2026", category:"Guide", emoji:"💦",
+   date:"May 2026", author:"Little PDX",
+   excerpt:"We rounded up every splash pad in the area, ranked by shade, parking, and toddler-friendliness.",
+   content:"Summer is here and we've visited every splash pad in the Beaverton and Hillsboro area so you don't have to guess. Here's our full ranking:\n\n🥇 Aloha Community Park — The best overall. Great equipment, decent shade trees, and a covered picnic area right next to the splash zone. Opens June 1st.\n\n🥈 Tualatin Community Park — Massive spray area, tons of jets and dumping buckets. Gets crowded on hot days but the park is big enough that it never feels overwhelming.\n\n🥉 Rood Bridge Park in Hillsboro — A hidden gem. Less crowded than the bigger parks, great grassy area around it for picnics.\n\nTips: Go early (before 11am) on hot days. Bring water shoes. Pack snacks."},
+  {id:2, title:"5 Rainy Day Activities That Aren't the Children's Museum", category:"Tips", emoji:"🌧️",
+   date:"April 2026", author:"Little PDX",
+   excerpt:"Great options when it's raining and you've already done the Children's Museum three times this month.",
+   content:"Portland rain doesn't have to mean a boring day. Here are five indoor spots we actually love:\n\n1. Treehouse Café & Play — Pay-to-play soft play with great coffee for parents. Perfect for under-5s.\n\n2. Little Explorers Gym — Open gym sessions on Tuesdays and Thursdays.\n\n3. Beaverton City Library — Free storytimes several mornings a week.\n\n4. Powell's Books (Cedar Hills) — The kids section is huge and they're totally fine with you sitting on the floor and reading for an hour.\n\n5. OMSI — Buy a membership if you go more than twice a year. Pays for itself fast."},
+  {id:3, title:"Where to Eat with a Toddler in Beaverton", category:"Food", emoji:"🍕",
+   date:"March 2026", author:"Little PDX",
+   excerpt:"Restaurants where the staff actually seem happy to see your kid walk in.",
+   content:"Eating out with a toddler is a sport. Here are the spots where we feel genuinely welcome:\n\nHot Lips Pizza — Loud enough that a meltdown blends in, booths are big, kids menu is solid.\n\nBeaverton Farmers Market — Not a restaurant but the easiest eating-out experience with little ones.\n\nGustav's German Pub — The outdoor biergarten is surprisingly great. Giant pretzels, plenty of space.\n\nTreehouse Café & Play — Built for exactly this. Kids play, you eat in peace."}
+];
+let nextPostId = 10;
+
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+// Add places here. lat/lng: right-click on Google Maps → "What's here?"
+let PLACES = [
+  {id:1, name:"Tualatin Hills Nature Park", tags:["park","bigkids","littlekids"], emoji:"🌲",
+   lat:45.4974, lng:-122.8033, rating:4.8, reviews:124, featured:false,
+   desc:"Over 200 acres of Pacific NW habitat with five miles of trails, a duck pond, and a free nature center. Stroller-friendly paved paths plus off-trail adventures for older kids.",
+   address:"15655 SW Millikan Way, Beaverton, OR", hours:"Dawn to dusk", cost:"Free", ageRange:"All ages",
+   photos:["🌲","🦆","🍂"], website:"https://thprd.org"},
+  {id:2, name:"Fanno Creek Trail", tags:["park","bigkids"], emoji:"🚲",
+   lat:45.4540, lng:-122.7850, rating:4.6, reviews:89, featured:false,
+   desc:"A beloved 15-mile paved trail following Fanno Creek through wetlands and neighborhoods. Perfect for bikes, scooters, and strollers. Mostly flat with great bird watching.",
+   address:"Along Fanno Creek, Beaverton–Portland", hours:"Always open", cost:"Free", ageRange:"Big kids",
+   photos:["🚲","🌿","🐦"], website:"#"},
+  {id:3, name:"Aloha Community Park", tags:["park","littlekids","bigkids"], emoji:"🛝",
+   lat:45.4929, lng:-122.8660, rating:4.7, reviews:203, featured:false,
+   desc:"One of the best splash pads in the area, open June through September. New playground equipment with a climbing structure, swings, and a covered picnic area.",
+   address:"18650 SW Kinnaman Rd, Aloha, OR", hours:"6am–10pm · Splash pad June–Sept", cost:"Free", ageRange:"All ages",
+   photos:["🛝","💦","☀️"], website:"#"},
+  {id:4, name:"Little Explorers Gym", tags:["classes","littlekids"], emoji:"🤸",
+   lat:45.4860, lng:-122.7975, rating:4.9, reviews:67, featured:true,
+   desc:"Open gym Tuesdays & Thursdays plus structured classes for crawlers to age 5. Toddler tumbling, parent-and-me classes, and birthday parties. First class always free!",
+   address:"12350 SW Allen Blvd, Beaverton, OR", hours:"Mon–Sat 9am–6pm", cost:"$12 drop-in · $80/mo classes", ageRange:"Little kids (0–5)",
+   photos:["🤸","🎪","🌟"], website:"#"},
+  {id:5, name:"Hot Lips Pizza – Beaverton", tags:["food","bigkids","littlekids"], emoji:"🍕",
+   lat:45.4875, lng:-122.8030, rating:4.4, reviews:312, featured:false,
+   desc:"The local-hero pizza chain with seasonal, mostly-Oregon ingredients. Big booths, a kids menu, and patient staff. Loud enough that toddlers blend right in.",
+   address:"10250 SW Washington Square Rd, Tigard, OR", hours:"11am–9pm daily", cost:"$$", ageRange:"All ages",
+   photos:["🍕","🥗","🧁"], website:"https://hotlipspizza.com"},
+  {id:6, name:"Kindermusik of Beaverton", tags:["classes","littlekids"], emoji:"🎵",
+   lat:45.5010, lng:-122.8105, rating:5.0, reviews:41, featured:false,
+   desc:"Evidence-based music and movement classes for babies through age 7. Research shows music education boosts early literacy, math skills, and emotional development.",
+   address:"3800 SW Cedar Hills Blvd, Beaverton, OR", hours:"Classes Tue–Sat, see schedule", cost:"$18/class · semester packages", ageRange:"Little kids (0–7)",
+   photos:["🎵","🎹","👶"], website:"#"},
+  {id:7, name:"Cooper Mountain Nature Park", tags:["park","bigkids"], emoji:"🦅",
+   lat:45.4472, lng:-122.8682, rating:4.7, reviews:156, featured:false,
+   desc:"A hidden gem with 230 acres of meadows, wetlands, and oak woodlands. Bring binoculars — there are raptors, deer, and even coyotes. Less crowded than the bigger parks.",
+   address:"18892 SW Kemmer Rd, Beaverton, OR", hours:"Dawn to dusk", cost:"Free", ageRange:"Best for kids 5+",
+   photos:["🦅","🌾","🦌"], website:"#"},
+  {id:8, name:"Gustav's German Pub", tags:["food"], emoji:"🥨",
+   lat:45.5220, lng:-122.7840, rating:4.5, reviews:88, featured:false,
+   desc:"Sounds like an unlikely kids pick, but the huge outdoor biergarten is surprisingly great for families. Giant pretzels, schnitzel, and kids pasta. No screens, good vibes.",
+   address:"10350 NE Vancouver Mall Dr, Portland, OR", hours:"11am–10pm (11pm Fri–Sat)", cost:"$$$", ageRange:"All ages",
+   photos:["🥨","🍺","🌳"], website:"#"},
+  {id:9, name:"Tualatin Community Park", tags:["park","bigkids","littlekids"], emoji:"⚽",
+   lat:45.3820, lng:-122.7620, rating:4.5, reviews:77, featured:false,
+   desc:"Massive park with multiple playgrounds, a spray ground, skate plaza, BMX track, and sports fields. Easily a half-day trip — bring snacks and sunscreen.",
+   address:"8515 SW Tualatin Rd, Tualatin, OR", hours:"6am–10pm", cost:"Free", ageRange:"All ages",
+   photos:["⚽","🛹","💦"], website:"#"},
+  {id:10, name:"Beaverton Farmers Market", tags:["food","littlekids","bigkids"], emoji:"🌽",
+   lat:45.4872, lng:-122.8065, rating:4.8, reviews:445, featured:true,
+   desc:"One of Oregon's largest farmers markets, open May–November on Saturdays. Live music, kids' activities, local food vendors, and the best strawberries you'll ever eat.",
+   address:"Hall Blvd & 5th St, Beaverton, OR", hours:"Sat 8am–1:30pm · May–Nov", cost:"Free entry", ageRange:"All ages",
+   photos:["🌽","🍓","🎶"], website:"https://beavertonfarmersmarket.com"},
+  {id:11, name:"Tanasbourne Skate Park", tags:["park","bigkids"], emoji:"🛹",
+   lat:45.5320, lng:-122.8550, rating:4.3, reviews:58, featured:false,
+   desc:"Free public skate park with beginner-friendly transitions and more advanced street elements. Helmets required under 18. Open year-round.",
+   address:"NW 206th Ave & Cornell Rd, Hillsboro, OR", hours:"Always open", cost:"Free", ageRange:"Kids 7+",
+   photos:["🛹","🎢","🏙️"], website:"#"},
+  {id:12, name:"Treehouse Café & Play", tags:["food","littlekids"], emoji:"🏠",
+   lat:45.4920, lng:-122.8200, rating:4.6, reviews:134, featured:true,
+   desc:"Pay-to-play indoor café with an amazing soft-play zone for under 5s. Adults get great coffee and pastries while the kids exhaust themselves. Genius concept.",
+   address:"3560 SW Hall Blvd, Beaverton, OR", hours:"Tue–Sun 8am–5pm", cost:"$8/child · Adults free", ageRange:"Little kids (0–5)",
+   photos:["🏠","☕","🧸"], website:"#"}
+];
+
+let SPONSORS = [
+  {id:1, name:"Little Explorers Gym", email:"info@littleexplorers.com", status:"active", msg:"Little Explorers Gym — New toddler tumbling classes starting June! First class free."},
+  {id:2, name:"Beaverton Farmers Market", email:"hello@bfm.com", status:"active", msg:"Beaverton Farmers Market — Every Saturday 8am–1:30pm through November. Free entry!"},
+  {id:3, name:"Treehouse Café & Play", email:"hi@treehousecafe.com", status:"active", msg:"Treehouse Café & Play — Indoor soft play + great coffee. Perfect rainy-day escape."}
+];
+
+let SUGGESTIONS = [
+  {id:1, name:"Orenco Woods Nature Park", cat:"Park", age:"All ages", why:"Gorgeous trail along Jackson Bottom. See great blue herons!", email:"sarah@gmail.com"},
+  {id:2, name:"Slappy Cakes", cat:"Restaurant", age:"All ages", why:"Kids cook their own pancakes on tabletop griddles. Insane and amazing.", email:""},
+  {id:3, name:"Romp n' Roll", cat:"Class / Activity", age:"Little kids (0–5)", why:"Amazing tumbling + arts classes for toddlers. My daughter loves it.", email:"jen@outlook.com"}
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let activeFilters = new Set(["all"]);
+let searchQ = "";
+let curView = "map";
+let selectedId = null;
+let map, markers = {};
+let zipBarOpen = false;
+let editingId = null;
+let nextId = 20;
+const TAG_LABELS = {park:"Park",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Store",splashpad:"Splash pad",misc:"Misc",free:"Free"};
+
+// ─── FILTER & MATCH ───────────────────────────────────────────────────────────
+function matches(p){
+  const q = searchQ.toLowerCase();
+  const ms = !q || p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q) || p.tags.some(t=>t.includes(q));
+  if(!ms) return false;
+  if(activeFilters.has("all")) return true;
+  return p.tags.some(t=>activeFilters.has(t));
+}
+function toggleFilter(f,btn){
+  if(f==="all"){activeFilters=new Set(["all"]);}
+  else{
+    activeFilters.delete("all");
+    activeFilters.has(f)?activeFilters.delete(f):activeFilters.add(f);
+    if(!activeFilters.size) activeFilters.add("all");
+  }
+  document.querySelectorAll(".pill").forEach(b=>b.classList.toggle("active",activeFilters.has(b.dataset.f)));
+  renderAll();
+}
+function sorted(list){
+  const s=document.getElementById("sb-sort").value;
+  const c=[...list];
+  if(s==="rating") return c.sort((a,b)=>(b.featured-a.featured)||(b.rating-a.rating));
+  if(s==="name") return c.sort((a,b)=>a.name.localeCompare(b.name));
+  if(s==="featured") return c.sort((a,b)=>b.featured-a.featured||b.rating-a.rating);
+  return c;
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function starsHtml(r){return "★".repeat(Math.floor(r))+(r%1>=0.5?"½":"")}
+function tagHtml(t){return `<span class="tag tag-${t}">${TAG_LABELS[t]||t}</span>`}
+function pinColor(p){
+  if(p.tags.includes("park")) return "#00897B";
+  if(p.tags.includes("food")) return "#C0392B";
+  if(p.tags.includes("classes")) return "#8E44AD";
+  if(p.tags.includes("bigkids")) return "#1A6FA0";
+  return "#FF6B35";
+}
+
+// ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+function renderSidebar(){
+  const vis=sorted(PLACES.filter(matches));
+  document.getElementById("sb-count").textContent=vis.length+" place"+(vis.length!==1?"s":"")+" nearby";
+  const el=document.getElementById("place-list");
+  if(!vis.length){el.innerHTML=`<div class="noresults"><div class="noresults-em">🔍</div><h4>No places found</h4><p>Try a different filter or search.</p></div>`;return;}
+  el.innerHTML=vis.map(p=>`
+    <div class="pcard${p.id===selectedId?" sel":""}${p.featured?" feat":""}" onclick="selectPlace(${p.id})">
+      <div class="pthumb">${p.emoji}</div>
+      <div class="pinfo">
+        <div class="ptop">
+          <div class="pname">${p.name}</div>
+          ${p.featured?`<span class="feat-badge">✦</span>`:""}
+        </div>
+        <div class="prating"><span class="stars">${starsHtml(p.rating)}</span>${p.rating.toFixed(1)} <span style="color:var(--navy-l)">(${p.reviews})</span></div>
+        <div class="ptags">${p.tags.map(tagHtml).join("")}</div>
+      </div>
+    </div>`).join("");
+}
+
+// ─── MAP PINS ─────────────────────────────────────────────────────────────────
+function makePinIcon(p){
+  const c=pinColor(p);
+  return L.divIcon({
+    className:"",
+    html:`<div style="width:36px;height:44px;position:relative;"><div style="width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${c};border:2.5px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.22);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:15px;line-height:1;">${p.emoji}</span></div></div>`,
+    iconSize:[36,44],iconAnchor:[18,44],popupAnchor:[0,-46]
+  });
+}
+function renderMapPins(){
+  const vis=PLACES.filter(matches);
+  const visIds=new Set(vis.map(p=>p.id));
+  PLACES.forEach(p=>{if(markers[p.id]&&!visIds.has(p.id)){map.removeLayer(markers[p.id]);delete markers[p.id];}});
+  vis.forEach(p=>{
+    if(!markers[p.id]){
+      const m=L.marker([p.lat,p.lng],{icon:makePinIcon(p),title:p.name});
+      m.bindPopup(popupHtml(p),{maxWidth:230,minWidth:230});
+      m.on("click",()=>selectPlace(p.id));
+      m.addTo(map);
+      markers[p.id]=m;
+    }
+  });
+}
+function popupHtml(p){
+  return `<div>
+    <div class="popup-img">${p.emoji}</div>
+    <div class="popup-body">
+      <div class="popup-name">${p.name}${p.featured?` <span class="feat-badge">✦</span>`:""}</div>
+      <div class="popup-meta"><span style="color:var(--orange)">${starsHtml(p.rating)}</span> ${p.rating.toFixed(1)} · ${p.reviews} reviews</div>
+      <div class="popup-tags">${p.tags.map(tagHtml).join("")}</div>
+      <button class="popup-btn" onclick="selectPlace(${p.id})">View details</button>
+    </div>
+  </div>`;
+}
+
+// ─── GRID ─────────────────────────────────────────────────────────────────────
+function renderGrid(){
+  const vis=sorted(PLACES.filter(matches));
+  document.getElementById("gridview").innerHTML=vis.map(p=>`
+    <div class="gcard${p.featured?" feat":""}" onclick="selectPlace(${p.id})">
+      <div class="gcard-img">${p.emoji}</div>
+      <div class="gcard-body">
+        <div class="gcard-top">
+          <div class="gcard-name">${p.name}</div>
+          ${p.featured?`<span class="feat-badge">✦</span>`:""}
+        </div>
+        <div class="gcard-meta"><span style="color:var(--orange)">${starsHtml(p.rating)}</span> ${p.rating.toFixed(1)} · ${p.reviews} reviews</div>
+        <div class="ptags" style="margin-bottom:8px">${p.tags.map(tagHtml).join("")}</div>
+        <div class="gcard-desc">${p.desc.substring(0,100)}…</div>
+      </div>
+      <div class="gcard-foot">
+        <span style="font-size:12px;color:var(--navy-m)">${p.cost}</span>
+        <span style="font-size:12px;color:var(--orange);font-weight:700">View →</span>
+      </div>
+    </div>`).join("");
+}
+
+// ─── SELECT & DRAWER ──────────────────────────────────────────────────────────
+function selectPlace(id){
+  selectedId=id;
+  const p=PLACES.find(x=>x.id===id);
+  if(!p) return;
+  renderSidebar();
+  if(curView==="map"&&map){
+    map.setView([p.lat,p.lng],15,{animate:true,duration:0.6});
+    if(markers[id]) markers[id].openPopup();
+  }
+  openDrawer(p);
+}
+function openDrawer(p){
+  const dc=document.getElementById("dcontent");
+  dc.innerHTML=`
+    <div class="dgallery">${p.photos.map((ph,i)=>`<div class="dimg${i===0?" big":""}">${ph}</div>`).join("")}</div>
+    <div class="dtitle">${p.name}</div>
+    <div class="dmeta">
+      <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--navy-m)">
+        <span style="color:var(--orange)">${starsHtml(p.rating)}</span>
+        <strong>${p.rating.toFixed(1)}</strong> <span style="color:var(--navy-l)">(${p.reviews} reviews)</span>
+      </div>
+      ${p.featured?`<span class="feat-badge">✦ Featured</span>`:""}
+    </div>
+    <div class="dtags">${p.tags.map(t=>`<span class="tag tag-${t}" style="font-size:12px;padding:4px 11px">${TAG_LABELS[t]||t}</span>`).join("")}</div>
+    <div class="ddesc">${p.desc}</div>
+    <div class="dinfogrid">
+      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><div class="icht"><div class="ichl">Address</div><div class="ichv">${p.address}</div></div></div>
+      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div class="icht"><div class="ichl">Hours</div><div class="ichv">${p.hours}</div></div></div>
+      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><div class="icht"><div class="ichl">Cost</div><div class="ichv">${p.cost}</div></div></div>
+      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><div class="icht"><div class="ichl">Best for</div><div class="ichv">${p.ageRange}</div></div></div>
+    </div>
+    <div class="dactions">
+      <button class="dactionbtn dab-orange" onclick="window.open('${p.website}','_blank')">Visit website ↗</button>
+      <button class="dactionbtn dab-outline" onclick="openMaps('${encodeURIComponent(p.address)}')">Directions 🗺️</button>
+    </div>`;
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("footstrip").classList.add("gone");
+}
+function closeDrawer(){
+  document.getElementById("drawer").classList.remove("open");
+  document.getElementById("footstrip").classList.remove("gone");
+  selectedId=null;
+  renderSidebar();
+}
+function openMaps(a){window.open("https://www.google.com/maps/search/?api=1&query="+a,"_blank")}
+
+// ─── VIEW TOGGLE ──────────────────────────────────────────────────────────────
+function setView(v){
+  curView=v;
+  document.getElementById("v-map").classList.toggle("active",v==="map");
+  document.getElementById("v-grid").classList.toggle("active",v==="grid");
+  const mapwrap=document.getElementById("mapwrap");
+  const grid=document.getElementById("gridview");
+  const sb=document.getElementById("sidebar");
+  if(v==="grid"){
+    mapwrap.style.display="none"; sb.style.display="none";
+    grid.classList.add("on"); renderGrid();
+  } else {
+    mapwrap.style.display=""; sb.style.display="";
+    grid.classList.remove("on");
+    setTimeout(()=>map&&map.invalidateSize(),60);
+  }
+}
+
+// ─── RENDER ALL ───────────────────────────────────────────────────────────────
+function renderAll(){
+  renderSidebar();
+  if(curView==="map") renderMapPins();
+  else renderGrid();
+}
+
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
+document.getElementById("search").addEventListener("input",e=>{searchQ=e.target.value.trim();renderAll();});
+
+// ─── ZIP CODE JUMP ────────────────────────────────────────────────────────────
+const ZIP_LL = {
+  "97005":[45.4925,-122.8028],"97006":[45.5094,-122.8440],"97007":[45.4672,-122.8467],
+  "97008":[45.4537,-122.7977],"97225":[45.5094,-122.7740],"97229":[45.5396,-122.8074],
+  "97003":[45.5000,-122.9070],"97004":[45.3470,-122.5040],"97201":[45.5122,-122.6891],
+  "97202":[45.4841,-122.6467],"97203":[45.5958,-122.7434],"97204":[45.5230,-122.6773],
+  "97206":[45.4841,-122.6119],"97207":[45.5237,-122.6844],"97209":[45.5281,-122.6843],
+  "97210":[45.5346,-122.7201],"97211":[45.5811,-122.6467],"97212":[45.5503,-122.6401],
+  "97213":[45.5325,-122.6049],"97214":[45.5178,-122.6476],"97215":[45.5178,-122.6119],
+  "97216":[45.5178,-122.5721],"97217":[45.5931,-122.7054],"97218":[45.5745,-122.6337],
+  "97219":[45.4535,-122.7434],"97220":[45.5503,-122.5721],"97221":[45.5003,-122.7434],
+  "97222":[45.4368,-122.6119],"97223":[45.4368,-122.7434],"97224":[45.4038,-122.7554],
+  "97030":[45.5042,-122.4370],"97034":[45.4038,-122.6707],"97035":[45.4038,-122.7021],
+  "97062":[45.3820,-122.7620],"97068":[45.3639,-122.7741],"97078":[45.4929,-122.8660],
+  "97124":[45.5320,-122.8550],"97006":[45.5094,-122.8440]
+};
+function toggleZip(){
+  zipBarOpen=!zipBarOpen;
+  document.getElementById("zipbar").classList.toggle("open",zipBarOpen);
+  document.getElementById("app").classList.toggle("zipopen",zipBarOpen);
+  if(zipBarOpen) document.getElementById("zip-input").focus();
+  document.getElementById("zip-status").textContent="";
+}
+function goZip(){
+  const z=document.getElementById("zip-input").value.trim();
+  const ll=ZIP_LL[z];
+  const st=document.getElementById("zip-status");
+  if(ll && map){
+    map.setView(ll,13,{animate:true,duration:0.8});
+    st.textContent="✓ Centered on "+z;
+    if(curView!=="map") setView("map");
+    setTimeout(toggleZip,1200);
+  } else {
+    st.textContent="Zip not found — try another";
+    st.style.color="#C0392B";
+  }
+}
+document.getElementById("zip-input").addEventListener("keydown",e=>{if(e.key==="Enter") goZip();});
+
+// ─── FOOTER STRIP ─────────────────────────────────────────────────────────────
+let fsIdx=0;
+function rotateFoot(){
+  const active=SPONSORS.filter(s=>s.status==="active");
+  if(!active.length) return;
+  document.getElementById("fs-text").textContent=active[fsIdx%active.length].msg;
+  fsIdx++;
+}
+function dismissFoot(){document.getElementById("footstrip").classList.add("gone");}
+rotateFoot(); setInterval(rotateFoot,7000);
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add("on");}
+function closeModal(id){document.getElementById(id).classList.remove("on");}
+document.querySelectorAll(".overlay").forEach(el=>el.addEventListener("click",e=>{if(e.target===el) el.classList.remove("on");}));
+function submitSuggest(){
+  const name=document.getElementById("sg-name").value.trim();
+  const why=document.getElementById("sg-why").value.trim();
+  if(!name){alert("Please enter a place name.");return;}
+  if(!why){alert("Please tell us why you love it!");return;}
+  SUGGESTIONS.unshift({
+    id:Date.now(),name,
+    cat:document.getElementById("sg-cat").value,
+    age:document.getElementById("sg-age").value,
+    addr:document.getElementById("sg-addr")?document.getElementById("sg-addr").value:"",
+    why,
+    submitter:document.getElementById("sg-yourname")?document.getElementById("sg-yourname").value:"",
+    email:document.getElementById("sg-email").value,
+    status:"pending"
+  });
+  closeModal("suggest-modal");
+  ["sg-name","sg-addr","sg-why","sg-yourname","sg-email"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  alert("Thanks for the suggestion! We review everything and will reach out if we add it. 🌲");
+}
+function submitAdvertise(){
+  const name=document.getElementById("adv-name")?document.getElementById("adv-name").value.trim():"";
+  const email=document.getElementById("adv-email")?document.getElementById("adv-email").value.trim():"";
+  if(!name||!email){alert("Please enter your business name and email.");return;}
+  SPONSORS.push({
+    id:Date.now(),name,email,
+    website:document.getElementById("adv-web")?document.getElementById("adv-web").value:"",
+    desc:document.getElementById("adv-desc")?document.getElementById("adv-desc").value:"",
+    status:"pending",
+    msg:`${name} — featured on Little PDX!`
+  });
+  closeModal("advertise-modal");
+  ["adv-name","adv-email","adv-web","adv-desc"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  alert("Thanks! We'll be in touch within a couple of days. 🤝");
+}
+function submitSponsor(){openModal("advertise-modal");}
+
+// ─── ADMIN ────────────────────────────────────────────────────────────────────
+function openAdmin(){document.getElementById("admin-overlay").classList.add("on");apTab("places",document.querySelector(".ap-tab"));}
+function closeAdmin(){document.getElementById("admin-overlay").classList.remove("on");}
+document.getElementById("admin-overlay").addEventListener("click",e=>{if(e.target===document.getElementById("admin-overlay")) closeAdmin();});
+function apTab(tab,btn){
+  document.querySelectorAll(".ap-tab").forEach(b=>b.classList.remove("on"));
+  btn.classList.add("on");
+  const body=document.getElementById("ap-body");
+  if(tab==="places") renderApPlaces(body);
+  else if(tab==="add"){editingId=null;renderApForm(body);}
+  else if(tab==="posts") renderApPosts(body);
+  else if(tab==="sponsors") renderApSponsors(body);
+  else if(tab==="suggestions") renderApSuggestions(body);
+  else if(tab==="stats") renderApStats(body);
+}
+
+function renderApPlaces(body){
+  body.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy)">${PLACES.length} places listed</div>
+      <button class="ap-btn primary" onclick="apTab('add',document.querySelectorAll('.ap-tab')[1])">+ Add new</button>
+    </div>
+    <div class="ap-list">
+      ${PLACES.map(p=>`
+        <div class="ap-item">
+          <div class="ap-item-emoji">${p.emoji}</div>
+          <div class="ap-item-info">
+            <div class="ap-item-name">${p.name}${p.featured?` <span class="feat-badge">✦ Featured</span>`:""}</div>
+            <div class="ap-item-meta">
+              <span>${p.tags.map(t=>TAG_LABELS[t]).join(", ")}</span>
+              <span>·</span><span>★ ${p.rating.toFixed(1)}</span>
+            </div>
+          </div>
+          <div class="ap-item-actions">
+            <button class="ap-btn" onclick="apEditPlace(${p.id})">Edit</button>
+            <button class="ap-btn" onclick="apToggleFeatured(${p.id})">${p.featured?"Unfeature":"Feature"}</button>
+            <button class="ap-btn danger" onclick="apDeletePlace(${p.id})">Delete</button>
+          </div>
+        </div>`).join("")}
+    </div>`;
+}
+
+function renderApForm(body){
+  const p=editingId ? PLACES.find(x=>x.id===editingId) : null;
+  const allTags=["park","bigkids","littlekids","food","classes","store","splashpad","free","misc"];
+  body.innerHTML=`
+    <div class="ap-form">
+      <h4>${p?"Edit: "+p.name:"Add a new place"}</h4>
+      <div class="ap-section-label">Basic info</div>
+      <div class="fg-row">
+        <div class="fg"><label>Emoji icon</label><input id="af-emoji" type="text" maxlength="2" value="${p?p.emoji:"🌟"}" style="font-size:20px;text-align:center"></div>
+        <div class="fg"><label>Name *</label><input id="af-name" type="text" value="${p?p.name:""}" placeholder="Place name"></div>
+      </div>
+      <div class="fg"><label>Description *</label><textarea id="af-desc" style="height:90px" placeholder="What's it like? Tips for first-timers?">${p?p.desc:""}</textarea></div>
+      <div class="ap-section-label">Category tags (select all that apply)</div>
+      <div class="tag-toggles" id="af-tags">
+        ${allTags.map(t=>`<div class="ttog${p&&p.tags.includes(t)?" on":""}" data-tag="${t}" onclick="this.classList.toggle('on')">${TAG_LABELS[t]}</div>`).join("")}
+      </div>
+      <div class="ap-section-label">Location</div>
+      <div class="fg"><label>Address</label><input id="af-addr" type="text" value="${p?p.address:""}" placeholder="Street, City, OR"></div>
+      <div class="fg-row">
+        <div class="fg"><label>Latitude</label><input id="af-lat" type="number" step="0.0001" value="${p?p.lat:45.4925}" placeholder="45.xxxx"></div>
+        <div class="fg"><label>Longitude</label><input id="af-lng" type="number" step="0.0001" value="${p?p.lng:-122.8028}" placeholder="-122.xxxx"></div>
+      </div>
+      <div style="font-size:11px;color:var(--navy-l);margin-top:-6px;margin-bottom:12px">💡 Right-click any spot on Google Maps → "What's here?" to get lat/lng.</div>
+      <div class="ap-section-label">Details</div>
+      <div class="fg-row">
+        <div class="fg"><label>Hours</label><input id="af-hours" type="text" value="${p?p.hours:""}" placeholder="e.g. 9am–5pm daily"></div>
+        <div class="fg"><label>Cost</label><input id="af-cost" type="text" value="${p?p.cost:""}" placeholder="Free, $, $$, $$$"></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Best age range</label><input id="af-age" type="text" value="${p?p.ageRange:""}" placeholder="All ages"></div>
+        <div class="fg"><label>Website</label><input id="af-web" type="text" value="${p?p.website:"#"}" placeholder="https://…"></div>
+      </div>
+      <div class="fg-row">
+        <div class="fg"><label>Rating (1–5)</label><input id="af-rating" type="number" min="1" max="5" step="0.1" value="${p?p.rating:4.5}"></div>
+        <div class="fg"><label>Review count</label><input id="af-reviews" type="number" value="${p?p.reviews:0}"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <input type="checkbox" id="af-featured" ${p&&p.featured?"checked":""} style="width:16px;height:16px;accent-color:var(--orange)">
+        <label for="af-featured" style="font-size:13px;font-weight:700;color:var(--navy);cursor:pointer">Mark as Featured (paid partner)</label>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="ap-btn" onclick="renderApPlaces(document.getElementById('ap-body'));document.querySelectorAll('.ap-tab')[0].classList.add('on');document.querySelectorAll('.ap-tab')[1].classList.remove('on')">Cancel</button>
+        <button class="ap-btn primary" onclick="apSavePlace()">✓ ${p?"Save changes":"Add place"}</button>
+      </div>
+    </div>`;
+}
+
+function apSavePlace(){
+  const name=document.getElementById("af-name").value.trim();
+  const desc=document.getElementById("af-desc").value.trim();
+  const lat=parseFloat(document.getElementById("af-lat").value);
+  const lng=parseFloat(document.getElementById("af-lng").value);
+  if(!name||!desc){alert("Name and description are required.");return;}
+  if(isNaN(lat)||isNaN(lng)){alert("Please enter valid coordinates.");return;}
+  const tags=[...document.querySelectorAll("#af-tags .ttog.on")].map(el=>el.dataset.tag);
+  if(!tags.length){alert("Please select at least one tag.");return;}
+  const data={
+    name, desc, tags, lat, lng,
+    emoji:document.getElementById("af-emoji").value||"🌟",
+    address:document.getElementById("af-addr").value,
+    hours:document.getElementById("af-hours").value||"See website",
+    cost:document.getElementById("af-cost").value||"Free",
+    ageRange:document.getElementById("af-age").value||"All ages",
+    website:document.getElementById("af-web").value||"#",
+    rating:parseFloat(document.getElementById("af-rating").value)||4.5,
+    reviews:parseInt(document.getElementById("af-reviews").value)||0,
+    featured:document.getElementById("af-featured").checked,
+    photos:[document.getElementById("af-emoji").value||"🌟","📍","⭐"]
+  };
+  if(editingId){
+    const idx=PLACES.findIndex(p=>p.id===editingId);
+    PLACES[idx]={...PLACES[idx],...data};
+    // Update/remove map marker
+    if(markers[editingId]){map.removeLayer(markers[editingId]);delete markers[editingId];}
+  } else {
+    data.id=nextId++;
+    PLACES.push(data);
+  }
+  renderAll();
+  editingId=null;
+  const body=document.getElementById("ap-body");
+  renderApPlaces(body);
+  document.querySelectorAll(".ap-tab").forEach((b,i)=>b.classList.toggle("on",i===0));
+  alert((editingId?"Updated":"Added")+": "+name+" ✓");
+}
+
+function apEditPlace(id){
+  editingId=id;
+  renderApForm(document.getElementById("ap-body"));
+  document.querySelectorAll(".ap-tab").forEach((b,i)=>b.classList.toggle("on",i===1));
+}
+function apDeletePlace(id){
+  if(!confirm("Delete this place?")) return;
+  PLACES=PLACES.filter(p=>p.id!==id);
+  if(markers[id]){map.removeLayer(markers[id]);delete markers[id];}
+  renderAll();
+  renderApPlaces(document.getElementById("ap-body"));
+}
+function apToggleFeatured(id){
+  const p=PLACES.find(x=>x.id===id);
+  if(p){p.featured=!p.featured;renderAll();renderApPlaces(document.getElementById("ap-body"));}
+}
+
+function renderApSponsors(body){
+  body.innerHTML=`
+    <div style="font-size:13px;color:var(--navy-m);margin-bottom:14px;line-height:1.6">
+      Featured sponsors get a gold badge, priority placement, and their message in the rotating footer strip.<br>
+      <strong>Rate: $49/month</strong> per listing.
+    </div>
+    ${SPONSORS.map(s=>`
+      <div class="sp-row">
+        <div class="sp-row-content">
+          <div class="sp-row-name">${s.name}</div>
+          <div class="sp-row-meta">${s.email} · ${s.msg}</div>
+        </div>
+        <span class="sp-status ${s.status==="active"?"sp-active":"sp-pending"}">${s.status}</span>
+        <button class="ap-btn" onclick="apToggleSponsors(${s.id})">${s.status==="active"?"Pause":"Activate"}</button>
+        <button class="ap-btn danger" onclick="apDeleteSponsor(${s.id})">Remove</button>
+      </div>`).join("")}
+    <div class="ap-form" style="margin-top:16px">
+      <h4>Add sponsor manually</h4>
+      <div class="fg"><label>Business name</label><input id="sp-an" type="text" placeholder="Business name"></div>
+      <div class="fg"><label>Email</label><input id="sp-ae" type="email" placeholder="contact@business.com"></div>
+      <div class="fg"><label>Footer message</label><input id="sp-am" type="text" placeholder="Message shown in the footer strip"></div>
+      <button class="ap-btn primary" onclick="apAddSponsor()" style="margin-top:4px">Add sponsor</button>
+    </div>`;
+}
+function apToggleSponsors(id){
+  const s=SPONSORS.find(x=>x.id===id);
+  if(s){s.status=s.status==="active"?"paused":"active";rotateFoot();renderApSponsors(document.getElementById("ap-body"));}
+}
+function apDeleteSponsor(id){
+  if(!confirm("Remove this sponsor?")) return;
+  SPONSORS=SPONSORS.filter(s=>s.id!==id);
+  renderApSponsors(document.getElementById("ap-body"));
+}
+function apAddSponsor(){
+  const name=document.getElementById("sp-an").value.trim();
+  if(!name){alert("Enter a business name.");return;}
+  SPONSORS.push({id:Date.now(),name,email:document.getElementById("sp-ae").value,status:"active",msg:document.getElementById("sp-am").value||name+" — featured on Little PDX!"});
+  renderApSponsors(document.getElementById("ap-body"));
+}
+
+function renderApSuggestions(body){
+  body.innerHTML=`
+    <div style="font-size:13px;color:var(--navy-m);margin-bottom:14px">${SUGGESTIONS.length} pending suggestion${SUGGESTIONS.length!==1?"s":""}</div>
+    ${SUGGESTIONS.length?SUGGESTIONS.map(s=>`
+      <div class="sug-row">
+        <div class="sug-row-top">
+          <div class="sug-row-name">${s.name}</div>
+          <span style="font-size:11px;color:var(--navy-l)">${s.cat} · ${s.age}</span>
+        </div>
+        <div class="sug-row-body">${s.why||"No description provided."}</div>
+        ${s.email?`<div style="font-size:11px;color:var(--navy-l);margin-top:4px">From: ${s.email}</div>`:""}
+        <div class="sug-row-actions">
+          <button class="ap-btn primary" onclick="apApproveSuggestion(${s.id})">✓ Add to map</button>
+          <button class="ap-btn danger" onclick="apDismissSuggestion(${s.id})">Dismiss</button>
+        </div>
+      </div>`).join(""):`<div class="noresults"><div class="noresults-em">✅</div><h4>All caught up!</h4><p>No pending suggestions.</p></div>`}`;
+}
+function apApproveSuggestion(id){
+  const s=SUGGESTIONS.find(x=>x.id===id);
+  if(!s) return;
+  SUGGESTIONS=SUGGESTIONS.filter(x=>x.id!==id);
+  alert(`"${s.name}" approved! Go to Add New to enter its full details and add it to the map.`);
+  renderApSuggestions(document.getElementById("ap-body"));
+}
+function apDismissSuggestion(id){
+  SUGGESTIONS=SUGGESTIONS.filter(s=>s.id!==id);
+  renderApSuggestions(document.getElementById("ap-body"));
+}
+
+function renderApStats(body){
+  const feat=PLACES.filter(p=>p.featured).length;
+  const totalRev=PLACES.reduce((a,p)=>a+p.reviews,0);
+  body.innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num">${PLACES.length}</div><div class="stat-label">Places listed</div></div>
+      <div class="stat-card"><div class="stat-num">${feat}</div><div class="stat-label">Featured sponsors</div></div>
+      <div class="stat-card"><div class="stat-num">$${feat*49}</div><div class="stat-label">Monthly revenue</div></div>
+      <div class="stat-card"><div class="stat-num">${SPONSORS.filter(s=>s.status==="active").length}</div><div class="stat-label">Active partners</div></div>
+      <div class="stat-card"><div class="stat-num">${SUGGESTIONS.length}</div><div class="stat-label">Pending suggestions</div></div>
+      <div class="stat-card"><div class="stat-num">${totalRev.toLocaleString()}</div><div class="stat-label">Total reviews</div></div>
+    </div>
+    <div style="background:var(--sand);border:1px solid var(--border);border-radius:var(--rl);padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">Revenue projections</div>
+      ${[3,5,10,20].map(n=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+          <span style="color:var(--navy-m)">${n} featured listings</span>
+          <strong style="color:var(--teal)">$${n*49}/mo · $${n*49*12}/yr</strong>
+        </div>`).join("")}
+    </div>`;
+}
+
+// ─── RECOMMENDED POSTS ────────────────────────────────────────────────────────
+let recOpen = false;
+function toggleRec(){
+  recOpen = !recOpen;
+  const sec = document.getElementById("rec-section");
+  const app = document.getElementById("app");
+  if(recOpen){
+    sec.style.display = "block";
+    renderRec();
+    sec.scrollIntoView({behavior:"smooth"});
+  } else {
+    sec.style.display = "none";
+  }
+}
+function renderRec(){
+  const grid = document.getElementById("rec-grid");
+  if(!POSTS.length){
+    grid.innerHTML = `<div class="rec-empty">No posts yet — add your first one in the Admin panel!</div>`;
+    return;
+  }
+  grid.innerHTML = POSTS.map(p=>`
+    <div class="rec-card" onclick="openPost(${p.id})">
+      <div class="rec-card-img">
+        <span>${p.emoji}</span>
+        <span class="rec-card-cat">${p.category}</span>
+      </div>
+      <div class="rec-card-body">
+        <div class="rec-card-date">${p.date}</div>
+        <div class="rec-card-title">${p.title}</div>
+        <div class="rec-card-excerpt">${p.excerpt}</div>
+        <div class="rec-card-foot">
+          <span class="rec-card-author">By ${p.author}</span>
+          <span class="rec-card-read">Read more →</span>
+        </div>
+      </div>
+    </div>`).join("");
+}
+function openPost(id){
+  const p = POSTS.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById("post-modal-content").innerHTML = `
+    <div class="pm-img">${p.emoji}</div>
+    <div class="pm-body">
+      <div class="pm-cat">${p.category}</div>
+      <div class="pm-title">${p.title}</div>
+      <div class="pm-meta">By ${p.author} · ${p.date}</div>
+      <div class="pm-content">${p.content}</div>
+    </div>`;
+  document.getElementById("post-overlay").classList.add("on");
+}
+function closePost(){
+  document.getElementById("post-overlay").classList.remove("on");
+}
+document.getElementById("post-overlay").addEventListener("click",e=>{
+  if(e.target===document.getElementById("post-overlay")) closePost();
+});
+
+// ─── ADMIN POSTS TAB ──────────────────────────────────────────────────────────
+function renderApPosts(body){
+  body.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy)">${POSTS.length} post${POSTS.length!==1?"s":""}</div>
+      <button class="ap-btn primary" onclick="renderApPostForm(document.getElementById('ap-body'))">+ Write new post</button>
+    </div>
+    <div class="ap-list">
+      ${POSTS.map(p=>`
+        <div class="ap-item">
+          <div class="ap-item-emoji">${p.emoji}</div>
+          <div class="ap-item-info">
+            <div class="ap-item-name">${p.title}</div>
+            <div class="ap-item-meta"><span>${p.category}</span><span>·</span><span>${p.date}</span></div>
+          </div>
+          <div class="ap-item-actions">
+            <button class="ap-btn" onclick="renderApPostForm(document.getElementById('ap-body'),${p.id})">Edit</button>
+            <button class="ap-btn danger" onclick="apDeletePost(${p.id})">Delete</button>
+          </div>
+        </div>`).join("")}
+    </div>`;
+}
+function renderApPostForm(body, id){
+  const p = id ? POSTS.find(x=>x.id===id) : null;
+  body.innerHTML=`
+    <div class="ap-form">
+      <h4>${p?"Edit post":"Write a new post"}</h4>
+      <div class="fg-row">
+        <div class="fg"><label>Emoji</label><input id="pf-emoji" type="text" maxlength="2" value="${p?p.emoji:"📝"}" style="font-size:20px;text-align:center"></div>
+        <div class="fg"><label>Category</label><input id="pf-cat" type="text" value="${p?p.category:"Guide"}" placeholder="Guide, Tips, Food, Events…"></div>
+      </div>
+      <div class="fg"><label>Title *</label><input id="pf-title" type="text" value="${p?p.title:""}" placeholder="Post title"></div>
+      <div class="fg"><label>Short excerpt (shown on card)</label><input id="pf-excerpt" type="text" value="${p?p.excerpt:""}" placeholder="One or two sentence teaser"></div>
+      <div class="fg"><label>Full content *</label><textarea id="pf-content" style="height:180px" placeholder="Write your full post here…">${p?p.content:""}</textarea></div>
+      <div class="fg-row">
+        <div class="fg"><label>Date</label><input id="pf-date" type="text" value="${p?p.date:new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'})}" placeholder="e.g. June 2026"></div>
+        <div class="fg"><label>Author</label><input id="pf-author" type="text" value="${p?p.author:"Little PDX"}" placeholder="Little PDX"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="ap-btn" onclick="renderApPosts(document.getElementById('ap-body'))">Cancel</button>
+        <button class="ap-btn primary" onclick="apSavePost(${id||'null'})">✓ ${p?"Save changes":"Publish post"}</button>
+      </div>
+    </div>`;
+}
+function apSavePost(id){
+  const title = document.getElementById("pf-title").value.trim();
+  const content = document.getElementById("pf-content").value.trim();
+  if(!title||!content){alert("Title and content are required.");return;}
+  const data = {
+    title, content,
+    emoji: document.getElementById("pf-emoji").value||"📝",
+    category: document.getElementById("pf-cat").value||"Guide",
+    excerpt: document.getElementById("pf-excerpt").value||title,
+    date: document.getElementById("pf-date").value||"2026",
+    author: document.getElementById("pf-author").value||"Little PDX"
+  };
+  if(id){
+    const idx = POSTS.findIndex(p=>p.id===id);
+    POSTS[idx] = {...POSTS[idx],...data};
+  } else {
+    data.id = nextPostId++;
+    POSTS.unshift(data);
+  }
+  if(recOpen) renderRec();
+  renderApPosts(document.getElementById("ap-body"));
+  alert((id?"Updated":"Published")+": "+title+" ✓");
+}
+function apDeletePost(id){
+  if(!confirm("Delete this post?")) return;
+  POSTS = POSTS.filter(p=>p.id!==id);
+  if(recOpen) renderRec();
+  renderApPosts(document.getElementById("ap-body"));
+}
+
+// ─── MAP INIT ─────────────────────────────────────────────────────────────────
+window.addEventListener("load",()=>{
+  // Set app top dynamically based on hero height
+  const hero = document.getElementById("hero-banner");
+  const filterbar = document.getElementById("filterbar");
+  const app = document.getElementById("app");
+  function setAppTop(){
+    const heroH = hero ? hero.offsetHeight : 0;
+    const filterH = filterbar ? filterbar.offsetHeight : 52;
+    const top = 60 + heroH + filterH;
+    app.style.top = top + "px";
+    document.documentElement.style.setProperty("--hero-h", heroH+"px");
+  }
+  setAppTop();
+  window.addEventListener("resize", setAppTop);
+
+  map=L.map("map",{center:[45.485,-122.800],zoom:12,zoomControl:true});
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains:"abcd",maxZoom:19
+  }).addTo(map);
+  renderAll();
+});
+</script>
+</body>
+</html>
