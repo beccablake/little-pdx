@@ -945,14 +945,15 @@ async function saveToAirtable(placeData, existingId){
     Emoji: placeData.emoji,
     Address: placeData.address,
     Cost: placeData.cost,
-    Website: placeData.website,
+    Featured: placeData.featured,
     Latitude: placeData.lat,
     Longitude: placeData.lng,
-    Featured: placeData.featured,
-    "Photo 1": placeData.photoUrls[0]||"",
-    "Photo 2": placeData.photoUrls[1]||"",
-    "Photo 3": placeData.photoUrls[2]||""
   };
+  // Only include URL fields if they have a value — Airtable rejects empty strings for URL fields
+  if(placeData.website && placeData.website !== "#") fields["Website"] = placeData.website;
+  if(placeData.photoUrls[0]) fields["Photo 1"] = placeData.photoUrls[0];
+  if(placeData.photoUrls[1]) fields["Photo 2"] = placeData.photoUrls[1];
+  if(placeData.photoUrls[2]) fields["Photo 3"] = placeData.photoUrls[2];
   const method = existingId ? "PATCH" : "POST";
   const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}${existingId?"/"+existingId:""}`;
   const res = await fetch(url, {
