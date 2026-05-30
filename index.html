@@ -680,7 +680,7 @@ body::before{
   #footstrip{font-size:12px;padding:7px 12px}
 
   /* Hero modal on mobile */
-  #mobile-hero-overlay{display:flex !important}
+  #mobile-hero-overlay.open{display:flex}
 }
 </style>
 </head>
@@ -736,7 +736,7 @@ body::before{
 
 <!-- MOBILE HERO OVERLAY -->
 <div id="mobile-hero-overlay" style="display:none;position:fixed;inset:0;z-index:1800;background:rgba(27,58,45,0.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeMobileHero()">
-  <div style="background:var(--sand);width:100%;border-radius:24px 24px 0 0;padding:20px 24px 40px;box-shadow:0 -8px 40px rgba(0,0,0,0.15);max-height:85vh;overflow-y:auto">
+  <div style="background:var(--sand);width:100%;border-radius:24px 24px 0 0;padding:20px 24px 40px;box-shadow:0 -8px 40px rgba(0,0,0,0.15);max-height:85vh;overflow-y:auto;transition:transform 0.2s ease">
     <div style="width:36px;height:4px;background:var(--sand-dd);border-radius:99px;margin:0 auto 16px"></div>
     <div class="hero-eyebrow">🌲 Beaverton & Portland Metro</div>
     <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--pine);letter-spacing:-1px;line-height:1;margin-bottom:8px">Little PDX</div>
@@ -1591,11 +1591,11 @@ function renderApForm(body){
       <div class="ap-section-label">Basic info</div>
       <div class="fg-row">
         <div class="fg" style="flex:0 0 auto">
-          <label>Emoji icon</label>
+          <label>Emoji</label>
           <div id="af-emoji-display" style="width:52px;height:52px;font-size:28px;border:1.5px solid var(--border-m);border-radius:var(--r);background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s" id="af-emoji-display">${p?p.emoji:"🌟"}</div>
           <input type="hidden" id="af-emoji" value="${p?p.emoji:"🌟"}">
         </div>
-        <div class="fg"><label>Name *</label><input id="af-name" type="text" value="${p?p.name:""}" placeholder="Place name"></div>
+        <div class="fg" style="flex:1"><label>Name *</label><input id="af-name" type="text" value="${p?p.name:""}" placeholder="Place name"></div>
       </div>
       <div id="emoji-picker">
         ${[
@@ -1984,11 +1984,37 @@ function apDeletePost(id){
 
 // ─── MOBILE HERO ──────────────────────────────────────────────────────────────
 function openMobileHero(){
-  document.getElementById("mobile-hero-overlay").style.display="flex";
+  document.getElementById("mobile-hero-overlay").classList.add("open");
 }
 function closeMobileHero(){
-  document.getElementById("mobile-hero-overlay").style.display="none";
+  document.getElementById("mobile-hero-overlay").classList.remove("open");
 }
+// Drag to dismiss on the handle
+window.addEventListener("load", ()=>{
+  const overlay = document.getElementById("mobile-hero-overlay");
+  const sheet = overlay ? overlay.querySelector("div") : null;
+  if(!sheet) return;
+  let startY = 0, currentY = 0, dragging = false;
+  sheet.addEventListener("touchstart", e=>{
+    // Only start drag from the handle area (top 40px)
+    if(e.touches[0].clientY - sheet.getBoundingClientRect().top > 40) return;
+    startY = e.touches[0].clientY;
+    dragging = true;
+  }, {passive:true});
+  sheet.addEventListener("touchmove", e=>{
+    if(!dragging) return;
+    currentY = e.touches[0].clientY;
+    const diff = Math.max(0, currentY - startY);
+    sheet.style.transform = `translateY(${diff}px)`;
+  }, {passive:true});
+  sheet.addEventListener("touchend", ()=>{
+    if(!dragging) return;
+    dragging = false;
+    const diff = currentY - startY;
+    sheet.style.transform = "";
+    if(diff > 80) closeMobileHero();
+  });
+});
 
 // ─── FILTER BAR SCROLL ARROWS ─────────────────────────────────────────────────
 function scrollFilters(dir){
