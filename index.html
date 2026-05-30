@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="config.js"></script>
 <style>
 /* ─── Reset ─────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -209,9 +210,11 @@ body::before{
 #zip-status{font-size:12px;color:var(--teal-d)}
 
 /* ─── MAIN LAYOUT ───────────────────────────────────────────────── */
-#app{display:flex;position:fixed;top:60px;left:0;right:0;bottom:0;transition:top 0.25s}
-#app.hasHero{top:calc(60px + var(--hero-h, 280px) + 52px)}
-#app.zipopen{top:calc(60px + var(--hero-h, 280px) + 52px + 36px)}
+#app{
+  display:flex;
+  position:fixed;left:0;right:0;bottom:0;
+  transition:top 0.32s ease;
+}
 
 /* ─── SIDEBAR ───────────────────────────────────────────────────── */
 #sidebar{
@@ -813,8 +816,9 @@ body::before{
   <div class="gate-box">
     <div style="font-size:32px;margin-bottom:10px">🌲</div>
     <h3>Admin Access</h3>
-    <p>Enter your password to manage Little PDX</p>
-    <input type="password" id="gate-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkGate()">
+    <p>Enter your password and Airtable token to manage Little PDX</p>
+    <input type="password" id="gate-pw" placeholder="Password" onkeydown="if(event.key==='Enter')document.getElementById('gate-token').focus()" style="margin-bottom:8px">
+    <input type="password" id="gate-token" placeholder="Airtable token (patXXXXX…)" onkeydown="if(event.key==='Enter')checkGate()" style="margin-bottom:8px;letter-spacing:0">
     <div class="gate-error" id="gate-error">Incorrect password — try again</div>
     <button class="btn-pine" style="width:100%;justify-content:center;padding:10px" onclick="checkGate()">Unlock →</button>
     <button onclick="document.getElementById('admin-gate').classList.remove('on')" style="margin-top:10px;background:none;border:none;font-size:12px;color:var(--navy-l);cursor:pointer;font-family:'Nunito',sans-serif">Cancel</button>
@@ -879,70 +883,113 @@ let POSTS = [
 ];
 let nextPostId = 10;
 
+// ─── AIRTABLE CONFIG ──────────────────────────────────────────────────────────
+// Config loaded from config.js (AIRTABLE_READ_TOKEN, AIRTABLE_BASE_ID, AIRTABLE_TABLE)
+let AIRTABLE_TOKEN = AIRTABLE_READ_TOKEN; // Write access upgraded when admin logs in
+
+// Convert an Airtable record to a PLACE object
+function recordToPlace(rec){
+  const f = rec.fields;
+  const tags = (f.Tags||[]).map(t=>t.toLowerCase().replace(/\s+/g,""));
+  return {
+    id: rec.id,          // Airtable record ID
+    name: f.Name||"",
+    desc: f.Description||"",
+    tags,
+    emoji: f.Emoji||"📍",
+    address: f.Address||"",
+    cost: f.Cost||"",
+    website: f.Website||"#",
+    lat: parseFloat(f.Latitude)||0,
+    lng: parseFloat(f.Longitude)||0,
+    featured: f.Featured||false,
+    photoUrls: [f["Photo 1"],f["Photo 2"],f["Photo 3"]].filter(Boolean),
+    photos: [f.Emoji||"📍"]
+  };
+}
+
+// Fetch all listings from Airtable (public read — token needed)
+async function fetchFromAirtable(){
+  if(!AIRTABLE_TOKEN){
+    // No token yet — show placeholder message
+    showMapMessage("Enter your admin token to load listings from Airtable, or listings will appear here once you connect.");
+    return;
+  }
+  showMapMessage("Loading listings…");
+  try {
+    let allRecords = [], offset = "";
+    do {
+      const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?pageSize=100${offset?"&offset="+offset:""}`;
+      const res = await fetch(url, {headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`}});
+      if(!res.ok) throw new Error("Airtable error: "+res.status);
+      const data = await res.json();
+      allRecords = allRecords.concat(data.records||[]);
+      offset = data.offset||"";
+    } while(offset);
+    PLACES = allRecords.filter(r=>r.fields.Name).map(recordToPlace);
+    clearMapMessage();
+    renderAll();
+  } catch(e){
+    showMapMessage("⚠️ Couldn't load listings. Check your token in Admin settings. ("+e.message+")");
+  }
+}
+
+// Save a place back to Airtable
+async function saveToAirtable(placeData, existingId){
+  if(!AIRTABLE_TOKEN) return null;
+  const fields = {
+    Name: placeData.name,
+    Description: placeData.desc,
+    Tags: placeData.tags.map(t=>TAG_LABELS[t]||t),
+    Emoji: placeData.emoji,
+    Address: placeData.address,
+    Cost: placeData.cost,
+    Website: placeData.website,
+    Latitude: placeData.lat,
+    Longitude: placeData.lng,
+    Featured: placeData.featured,
+    "Photo 1": placeData.photoUrls[0]||"",
+    "Photo 2": placeData.photoUrls[1]||"",
+    "Photo 3": placeData.photoUrls[2]||""
+  };
+  const method = existingId ? "PATCH" : "POST";
+  const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}${existingId?"/"+existingId:""}`;
+  const res = await fetch(url, {
+    method,
+    headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`,"Content-Type":"application/json"},
+    body: JSON.stringify({fields})
+  });
+  if(!res.ok) throw new Error("Save failed: "+res.status);
+  return await res.json();
+}
+
+// Delete a place from Airtable
+async function deleteFromAirtable(airtableId){
+  if(!AIRTABLE_TOKEN) return;
+  await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}/${airtableId}`,{
+    method:"DELETE",
+    headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`}
+  });
+}
+
+function showMapMessage(msg){
+  let el = document.getElementById("map-message");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "map-message";
+    el.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px 28px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.12);font-size:14px;color:#3D5C3A;text-align:center;max-width:320px;z-index:500;line-height:1.6;font-family:'Nunito',sans-serif";
+    document.getElementById("mapwrap").appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = "block";
+}
+function clearMapMessage(){
+  const el = document.getElementById("map-message");
+  if(el) el.style.display = "none";
+}
+
 // ─── DATA ─────────────────────────────────────────────────────────────────────
-// Add places here. lat/lng: right-click on Google Maps → "What's here?"
-let PLACES = [
-  {id:1, name:"Tualatin Hills Nature Park", tags:["park","bigkids","littlekids"], emoji:"🌲",
-   lat:45.4974, lng:-122.8033, rating:4.8, reviews:124, featured:false,
-   desc:"Over 200 acres of Pacific NW habitat with five miles of trails, a duck pond, and a free nature center. Stroller-friendly paved paths plus off-trail adventures for older kids.",
-   address:"15655 SW Millikan Way, Beaverton, OR", hours:"Dawn to dusk", cost:"Free", ageRange:"All ages",
-   photos:["🌲","🦆","🍂"], website:"https://thprd.org"},
-  {id:2, name:"Fanno Creek Trail", tags:["park","bigkids"], emoji:"🚲",
-   lat:45.4540, lng:-122.7850, rating:4.6, reviews:89, featured:false,
-   desc:"A beloved 15-mile paved trail following Fanno Creek through wetlands and neighborhoods. Perfect for bikes, scooters, and strollers. Mostly flat with great bird watching.",
-   address:"Along Fanno Creek, Beaverton–Portland", hours:"Always open", cost:"Free", ageRange:"Big kids",
-   photos:["🚲","🌿","🐦"], website:"#"},
-  {id:3, name:"Aloha Community Park", tags:["park","littlekids","bigkids"], emoji:"🛝",
-   lat:45.4929, lng:-122.8660, rating:4.7, reviews:203, featured:false,
-   desc:"One of the best splash pads in the area, open June through September. New playground equipment with a climbing structure, swings, and a covered picnic area.",
-   address:"18650 SW Kinnaman Rd, Aloha, OR", hours:"6am–10pm · Splash pad June–Sept", cost:"Free", ageRange:"All ages",
-   photos:["🛝","💦","☀️"], website:"#"},
-  {id:4, name:"Little Explorers Gym", tags:["classes","littlekids"], emoji:"🤸",
-   lat:45.4860, lng:-122.7975, rating:4.9, reviews:67, featured:true,
-   desc:"Open gym Tuesdays & Thursdays plus structured classes for crawlers to age 5. Toddler tumbling, parent-and-me classes, and birthday parties. First class always free!",
-   address:"12350 SW Allen Blvd, Beaverton, OR", hours:"Mon–Sat 9am–6pm", cost:"$12 drop-in · $80/mo classes", ageRange:"Little kids (0–5)",
-   photos:["🤸","🎪","🌟"], website:"#"},
-  {id:5, name:"Hot Lips Pizza – Beaverton", tags:["food","bigkids","littlekids"], emoji:"🍕",
-   lat:45.4875, lng:-122.8030, rating:4.4, reviews:312, featured:false,
-   desc:"The local-hero pizza chain with seasonal, mostly-Oregon ingredients. Big booths, a kids menu, and patient staff. Loud enough that toddlers blend right in.",
-   address:"10250 SW Washington Square Rd, Tigard, OR", hours:"11am–9pm daily", cost:"$$", ageRange:"All ages",
-   photos:["🍕","🥗","🧁"], website:"https://hotlipspizza.com"},
-  {id:6, name:"Kindermusik of Beaverton", tags:["classes","littlekids"], emoji:"🎵",
-   lat:45.5010, lng:-122.8105, rating:5.0, reviews:41, featured:false,
-   desc:"Evidence-based music and movement classes for babies through age 7. Research shows music education boosts early literacy, math skills, and emotional development.",
-   address:"3800 SW Cedar Hills Blvd, Beaverton, OR", hours:"Classes Tue–Sat, see schedule", cost:"$18/class · semester packages", ageRange:"Little kids (0–7)",
-   photos:["🎵","🎹","👶"], website:"#"},
-  {id:7, name:"Cooper Mountain Nature Park", tags:["park","bigkids"], emoji:"🦅",
-   lat:45.4472, lng:-122.8682, rating:4.7, reviews:156, featured:false,
-   desc:"A hidden gem with 230 acres of meadows, wetlands, and oak woodlands. Bring binoculars — there are raptors, deer, and even coyotes. Less crowded than the bigger parks.",
-   address:"18892 SW Kemmer Rd, Beaverton, OR", hours:"Dawn to dusk", cost:"Free", ageRange:"Best for kids 5+",
-   photos:["🦅","🌾","🦌"], website:"#"},
-  {id:8, name:"Gustav's German Pub", tags:["food"], emoji:"🥨",
-   lat:45.5220, lng:-122.7840, rating:4.5, reviews:88, featured:false,
-   desc:"Sounds like an unlikely kids pick, but the huge outdoor biergarten is surprisingly great for families. Giant pretzels, schnitzel, and kids pasta. No screens, good vibes.",
-   address:"10350 NE Vancouver Mall Dr, Portland, OR", hours:"11am–10pm (11pm Fri–Sat)", cost:"$$$", ageRange:"All ages",
-   photos:["🥨","🍺","🌳"], website:"#"},
-  {id:9, name:"Tualatin Community Park", tags:["park","bigkids","littlekids"], emoji:"⚽",
-   lat:45.3820, lng:-122.7620, rating:4.5, reviews:77, featured:false,
-   desc:"Massive park with multiple playgrounds, a spray ground, skate plaza, BMX track, and sports fields. Easily a half-day trip — bring snacks and sunscreen.",
-   address:"8515 SW Tualatin Rd, Tualatin, OR", hours:"6am–10pm", cost:"Free", ageRange:"All ages",
-   photos:["⚽","🛹","💦"], website:"#"},
-  {id:10, name:"Beaverton Farmers Market", tags:["food","littlekids","bigkids"], emoji:"🌽",
-   lat:45.4872, lng:-122.8065, rating:4.8, reviews:445, featured:true,
-   desc:"One of Oregon's largest farmers markets, open May–November on Saturdays. Live music, kids' activities, local food vendors, and the best strawberries you'll ever eat.",
-   address:"Hall Blvd & 5th St, Beaverton, OR", hours:"Sat 8am–1:30pm · May–Nov", cost:"Free entry", ageRange:"All ages",
-   photos:["🌽","🍓","🎶"], website:"https://beavertonfarmersmarket.com"},
-  {id:11, name:"Tanasbourne Skate Park", tags:["park","bigkids"], emoji:"🛹",
-   lat:45.5320, lng:-122.8550, rating:4.3, reviews:58, featured:false,
-   desc:"Free public skate park with beginner-friendly transitions and more advanced street elements. Helmets required under 18. Open year-round.",
-   address:"NW 206th Ave & Cornell Rd, Hillsboro, OR", hours:"Always open", cost:"Free", ageRange:"Kids 7+",
-   photos:["🛹","🎢","🏙️"], website:"#"},
-  {id:12, name:"Treehouse Café & Play", tags:["food","littlekids"], emoji:"🏠",
-   lat:45.4920, lng:-122.8200, rating:4.6, reviews:134, featured:true,
-   desc:"Pay-to-play indoor café with an amazing soft-play zone for under 5s. Adults get great coffee and pastries while the kids exhaust themselves. Genius concept.",
-   address:"3560 SW Hall Blvd, Beaverton, OR", hours:"Tue–Sun 8am–5pm", cost:"$8/child · Adults free", ageRange:"Little kids (0–5)",
-   photos:["🏠","☕","🧸"], website:"#"}
-];
+let PLACES = []; // Loaded from Airtable on login
 
 let SPONSORS = [
   {id:1, name:"Little Explorers Gym", email:"info@littleexplorers.com", status:"active", msg:"Little Explorers Gym — New toddler tumbling classes starting June! First class free."},
@@ -1179,7 +1226,7 @@ const ZIP_LL = {
 function toggleZip(){
   zipBarOpen=!zipBarOpen;
   document.getElementById("zipbar").classList.toggle("open",zipBarOpen);
-  document.getElementById("app").classList.toggle("zipopen",zipBarOpen);
+  setTimeout(setAppTop, 50);
   if(zipBarOpen) document.getElementById("zip-input").focus();
   document.getElementById("zip-status").textContent="";
 }
@@ -1266,13 +1313,18 @@ function openAdmin(){
 }
 function checkGate(){
   const pw = document.getElementById("gate-pw").value;
+  const token = document.getElementById("gate-token").value.trim();
   if(pw === ADMIN_PASSWORD){
     adminUnlocked = true;
+    AIRTABLE_TOKEN = token;
     document.getElementById("admin-gate").classList.remove("on");
     document.getElementById("gate-pw").value = "";
+    document.getElementById("gate-token").value = "";
     document.getElementById("gate-error").classList.remove("on");
     document.getElementById("admin-overlay").classList.add("on");
     apTab("places",document.querySelector(".ap-tab"));
+    // Fetch latest from Airtable
+    if(AIRTABLE_TOKEN) fetchFromAirtable();
   } else {
     document.getElementById("gate-error").classList.add("on");
     document.getElementById("gate-pw").value = "";
@@ -1289,11 +1341,8 @@ function toggleHero(){
   banner.classList.toggle("collapsed", heroCollapsed);
   btn.textContent = heroCollapsed ? "▼" : "▲";
   btn.title = heroCollapsed ? "Expand header" : "Minimize header";
-  // Wait for CSS transition to finish then recalculate
-  setTimeout(()=>{
-    setAppTop();
-    if(map) map.invalidateSize();
-  }, 320);
+  setAppTop();
+  setTimeout(setAppTop, 350);
 }
 function closeAdmin(){document.getElementById("admin-overlay").classList.remove("on");}
 document.getElementById("admin-overlay").addEventListener("click",e=>{if(e.target===document.getElementById("admin-overlay")) closeAdmin();});
@@ -1387,7 +1436,7 @@ function renderApForm(body){
     </div>`;
 }
 
-function apSavePlace(){
+async function apSavePlace(){
   const name=document.getElementById("af-name").value.trim();
   const desc=document.getElementById("af-desc").value.trim();
   const lat=parseFloat(document.getElementById("af-lat").value);
@@ -1400,12 +1449,8 @@ function apSavePlace(){
     name, desc, tags, lat, lng,
     emoji:document.getElementById("af-emoji").value||"🌟",
     address:document.getElementById("af-addr").value,
-    hours:document.getElementById("af-hours").value||"See website",
     cost:document.getElementById("af-cost").value||"Free",
-    ageRange:document.getElementById("af-age").value||"All ages",
     website:document.getElementById("af-web").value||"#",
-    rating:parseFloat(document.getElementById("af-rating").value)||4.5,
-    reviews:parseInt(document.getElementById("af-reviews").value)||0,
     featured:document.getElementById("af-featured").checked,
     photoUrls:[
       document.getElementById("af-photo1").value.trim(),
@@ -1414,21 +1459,27 @@ function apSavePlace(){
     ].filter(Boolean),
     photos:[document.getElementById("af-emoji").value||"🌟","📍","⭐"]
   };
-  if(editingId){
-    const idx=PLACES.findIndex(p=>p.id===editingId);
-    PLACES[idx]={...PLACES[idx],...data};
-    // Update/remove map marker
-    if(markers[editingId]){map.removeLayer(markers[editingId]);delete markers[editingId];}
-  } else {
-    data.id=nextId++;
-    PLACES.push(data);
+  const btn = document.querySelector(".ap-btn.primary");
+  if(btn){btn.textContent="Saving…";btn.disabled=true;}
+  try {
+    const saved = await saveToAirtable(data, editingId||null);
+    if(editingId){
+      const idx=PLACES.findIndex(p=>p.id===editingId);
+      PLACES[idx]={...PLACES[idx],...data};
+      if(markers[editingId]){map.removeLayer(markers[editingId]);delete markers[editingId];}
+    } else {
+      data.id = saved.id;
+      PLACES.push(data);
+    }
+    renderAll();
+    editingId=null;
+    renderApPlaces(document.getElementById("ap-body"));
+    document.querySelectorAll(".ap-tab").forEach((b,i)=>b.classList.toggle("on",i===0));
+    alert("✓ Saved: "+name);
+  } catch(e){
+    alert("Error saving: "+e.message);
+    if(btn){btn.textContent="✓ Save";btn.disabled=false;}
   }
-  renderAll();
-  editingId=null;
-  const body=document.getElementById("ap-body");
-  renderApPlaces(body);
-  document.querySelectorAll(".ap-tab").forEach((b,i)=>b.classList.toggle("on",i===0));
-  alert((editingId?"Updated":"Added")+": "+name+" ✓");
 }
 
 function apEditPlace(id){
@@ -1436,16 +1487,30 @@ function apEditPlace(id){
   renderApForm(document.getElementById("ap-body"));
   document.querySelectorAll(".ap-tab").forEach((b,i)=>b.classList.toggle("on",i===1));
 }
-function apDeletePlace(id){
-  if(!confirm("Delete this place?")) return;
-  PLACES=PLACES.filter(p=>p.id!==id);
-  if(markers[id]){map.removeLayer(markers[id]);delete markers[id];}
-  renderAll();
-  renderApPlaces(document.getElementById("ap-body"));
+async function apDeletePlace(id){
+  if(!confirm("Delete this place? This will remove it from Airtable permanently.")) return;
+  try {
+    await deleteFromAirtable(id);
+    PLACES=PLACES.filter(p=>p.id!==id);
+    if(markers[id]){map.removeLayer(markers[id]);delete markers[id];}
+    renderAll();
+    renderApPlaces(document.getElementById("ap-body"));
+  } catch(e){
+    alert("Error deleting: "+e.message);
+  }
 }
-function apToggleFeatured(id){
+async function apToggleFeatured(id){
   const p=PLACES.find(x=>x.id===id);
-  if(p){p.featured=!p.featured;renderAll();renderApPlaces(document.getElementById("ap-body"));}
+  if(!p) return;
+  p.featured=!p.featured;
+  try {
+    await saveToAirtable(p, id);
+    renderAll();
+    renderApPlaces(document.getElementById("ap-body"));
+  } catch(e){
+    p.featured=!p.featured; // revert
+    alert("Error updating: "+e.message);
+  }
 }
 
 function renderApSponsors(body){
@@ -1679,7 +1744,8 @@ window.addEventListener("load",()=>{
   function setAppTop(){
     const heroH = hero ? hero.getBoundingClientRect().height : 0;
     const filterH = filterbar ? filterbar.getBoundingClientRect().height : 52;
-    const top = 60 + heroH + filterH;
+    const zipH = zipBarOpen ? 36 : 0;
+    const top = 60 + heroH + filterH + zipH;
     app.style.top = top + "px";
     document.documentElement.style.setProperty("--hero-h", heroH+"px");
     if(map) map.invalidateSize();
@@ -1692,7 +1758,8 @@ window.addEventListener("load",()=>{
     attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
     subdomains:"abcd",maxZoom:19
   }).addTo(map);
-  renderAll();
+  // Load listings for all visitors using the read token
+  fetchFromAirtable();
 });
 </script>
 </body>
