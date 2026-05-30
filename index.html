@@ -1072,17 +1072,20 @@ function renderSidebar(){
   const el=document.getElementById("place-list");
   if(!vis.length){el.innerHTML=`<div class="noresults"><div class="noresults-em">🔍</div><h4>No places found</h4><p>Try a different filter or search.</p></div>`;return;}
   el.innerHTML=vis.map(p=>`
-    <div class="pcard${p.id===selectedId?" sel":""}${p.featured?" feat":""}" onclick="selectPlace(${p.id})">
+    <div class="pcard${p.id===selectedId?" sel":""}${p.featured?" feat":""}" data-id="${p.id}">
       <div class="pthumb">${p.photoUrls&&p.photoUrls[0]?`<img src="${p.photoUrls[0]}" alt="${p.name}" loading="lazy">`:`<span style="font-size:28px">${p.emoji}</span>`}</div>
       <div class="pinfo">
         <div class="ptop">
           <div class="pname">${p.name}</div>
           ${p.featured?`<span class="feat-badge">✦</span>`:""}
         </div>
-        <div class="prating"><span class="stars">${p.rating?starsHtml(p.rating)+"</span>"+(p.rating||0).toFixed(1):'\</span>'}</div>
         <div class="ptags">${p.tags.map(tagHtml).join("")}</div>
       </div>
     </div>`).join("");
+  // Event delegation — works with any ID format
+  el.querySelectorAll(".pcard").forEach(card=>{
+    card.addEventListener("click",()=>selectPlace(card.dataset.id, true));
+  });
 }
 
 // ─── MAP PINS ─────────────────────────────────────────────────────────────────
@@ -1102,7 +1105,7 @@ function renderMapPins(){
     if(!markers[p.id]){
       const m=L.marker([p.lat,p.lng],{icon:makePinIcon(p),title:p.name});
       m.bindPopup(popupHtml(p),{maxWidth:230,minWidth:230});
-      m.on("click",()=>{window._popupId=p.id;selectPlace(p.id);});
+      m.on("click",()=>{window._popupId=p.id;});
       m.addTo(map);
       markers[p.id]=m;
     }
@@ -1124,27 +1127,30 @@ function popupHtml(p){
 // ─── GRID ─────────────────────────────────────────────────────────────────────
 function renderGrid(){
   const vis=sorted(PLACES.filter(matches));
-  document.getElementById("gridview").innerHTML=vis.map(p=>`
-    <div class="gcard${p.featured?" feat":""}" onclick="selectPlace(${p.id})">
+  const grid=document.getElementById("gridview");
+  grid.innerHTML=vis.map(p=>`
+    <div class="gcard${p.featured?" feat":""}" data-id="${p.id}">
       <div class="gcard-img">${p.photoUrls&&p.photoUrls[0]?`<img src="${p.photoUrls[0]}" alt="${p.name}" loading="lazy">`:`<span style="font-size:46px">${p.emoji}</span>`}</div>
       <div class="gcard-body">
         <div class="gcard-top">
-          <div class="gcard-name">${p.name}</div>
+          <div class="gcard-name">${p.emoji} ${p.name}</div>
           ${p.featured?`<span class="feat-badge">✦</span>`:""}
         </div>
-        <div class="gcard-meta"><span style="color:var(--orange)">${p.rating?starsHtml(p.rating):""}</span> ${(p.rating||0).toFixed(1)} · ${p.reviews} reviews</div>
         <div class="ptags" style="margin-bottom:8px">${p.tags.map(tagHtml).join("")}</div>
         <div class="gcard-desc">${p.desc.substring(0,100)}…</div>
       </div>
       <div class="gcard-foot">
-        <span style="font-size:12px;color:var(--navy-m)">${p.cost}</span>
+        <span style="font-size:12px;color:var(--navy-m)">${p.cost||"Free"}</span>
         <span style="font-size:12px;color:var(--orange);font-weight:700">View →</span>
       </div>
     </div>`).join("");
+  grid.querySelectorAll(".gcard").forEach(card=>{
+    card.addEventListener("click",()=>selectPlace(card.dataset.id, true));
+  });
 }
 
 // ─── SELECT & DRAWER ──────────────────────────────────────────────────────────
-function selectPlace(id){
+function selectPlace(id, openDetail=true){
   selectedId=id;
   const p=PLACES.find(x=>x.id===id);
   if(!p) return;
@@ -1153,7 +1159,7 @@ function selectPlace(id){
     map.setView([p.lat,p.lng],15,{animate:true,duration:0.6});
     if(markers[id]) markers[id].openPopup();
   }
-  openDrawer(p);
+  if(openDetail) openDrawer(p);
 }
 function openDrawer(p){
   const dc=document.getElementById("dcontent");
