@@ -891,7 +891,9 @@ let AIRTABLE_TOKEN = AIRTABLE_READ_TOKEN; // Write access upgraded when admin lo
 // Convert an Airtable record to a PLACE object
 function recordToPlace(rec){
   const f = rec.fields;
-  const tags = (f.Tags||[]).map(t=>t.toLowerCase().replace(/\s+/g,""));
+  // Map Airtable tag labels back to internal keys
+  const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc"};
+  const tags = (f.Tags||[]).map(t=>TAG_TO_KEY[t]||t.toLowerCase().replace(/\s+/g,""));
   return {
     id: rec.id,          // Airtable record ID
     name: f.Name||"",
@@ -1014,7 +1016,7 @@ let map, markers = {};
 let zipBarOpen = false;
 let editingId = null;
 let nextId = 20;
-const TAG_LABELS = {park:"Park",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Store",splashpad:"Splash pad",misc:"Misc",free:"Free"};
+const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free"};
 
 // ─── FILTER & MATCH ───────────────────────────────────────────────────────────
 function matches(p){
