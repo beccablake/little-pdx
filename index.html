@@ -317,15 +317,22 @@ body::before{
 
 /* ─── DETAIL DRAWER ─────────────────────────────────────────────── */
 #drawer{
-  position:fixed;bottom:0;left:0;right:0;z-index:1200;
-  background:var(--sand);border-top:1px solid var(--border);
-  border-radius:24px 24px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,0.12);
-  transform:translateY(100%);transition:transform 0.32s cubic-bezier(0.34,1.3,0.64,1);
-  max-height:82vh;overflow-y:auto;
+  position:fixed;inset:0;z-index:1200;
+  background:rgba(26,43,26,0.5);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  opacity:0;visibility:hidden;transition:opacity 0.2s,visibility 0.2s;
 }
-#drawer.open{transform:translateY(0)}
-.dhandle{width:38px;height:4px;border-radius:99px;background:var(--sand-dd);margin:12px auto 0}
-#dcontent{padding:16px 24px 48px}
+#drawer.open{opacity:1;visibility:visible}
+#drawer-inner{
+  background:var(--sand);border-radius:var(--rxl);
+  width:100%;max-width:580px;max-height:85vh;overflow-y:auto;
+  box-shadow:var(--shadow-lg);position:relative;
+  transform:translateY(16px);transition:transform 0.25s cubic-bezier(0.34,1.2,0.64,1);
+}
+#drawer.open #drawer-inner{transform:translateY(0)}
+.dhandle{display:none}
+#dcontent{padding:20px 24px 32px}
 .dgallery{display:flex;gap:8px;margin-bottom:18px;overflow-x:auto;padding-bottom:4px}
 .dgallery::-webkit-scrollbar{display:none}
 .dimg{
@@ -725,10 +732,12 @@ body::before{
 </div>
 
 <!-- DETAIL DRAWER -->
-<div id="drawer">
-  <div class="dhandle"></div>
-  <div id="dcontent"></div>
-  <button id="dclose" onclick="closeDrawer()">✕</button>
+<div id="drawer" onclick="if(event.target===this)closeDrawer()">
+  <div id="drawer-inner">
+    <div class="dhandle"></div>
+    <div id="dcontent"></div>
+    <button id="dclose" onclick="closeDrawer()">✕</button>
+  </div>
 </div>
 
 <!-- FOOTER STRIP -->
@@ -1147,17 +1156,17 @@ function selectPlace(id){
 }
 function openDrawer(p){
   const dc=document.getElementById("dcontent");
+  // Only show gallery if there are real photo URLs
+  const realPhotos = (p.photoUrls||[]).filter(u=>u&&u.startsWith("http"));
+  const galleryHtml = realPhotos.length ? `
+    <div class="dgallery">${realPhotos.map((ph,i)=>`
+      <div class="dimg${i===0?" big":""}"><img src="${ph}" alt="${p.name}" loading="lazy"></div>`).join("")}
+    </div>` : "";
+
   dc.innerHTML=`
-    <div class="dgallery">${(p.photoUrls&&p.photoUrls.length?p.photoUrls:p.photos).map((ph,i)=>{
-      const isUrl = typeof ph==="string"&&ph.startsWith("http");
-      return `<div class="dimg${i===0?" big":""}">${isUrl?`<img src="${ph}" alt="${p.name}" loading="lazy">`:`<span>${ph}</span>`}</div>`;
-    }).join("")}</div>
+    ${galleryHtml}
     <div class="dtitle">${p.name}</div>
     <div class="dmeta">
-      <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--navy-m)">
-        <span style="color:var(--orange)">${p.rating?starsHtml(p.rating):""}</span>
-        <strong>${(p.rating||0).toFixed(1)}</strong> <span style="color:var(--navy-l)">(${(p.reviews||0)} reviews)</span>
-      </div>
       ${p.featured?`<span class="feat-badge">✦ Featured</span>`:""}
     </div>
     <div class="dtags">${p.tags.map(t=>`<span class="tag tag-${t}" style="font-size:12px;padding:4px 11px">${TAG_LABELS[t]||t}</span>`).join("")}</div>
@@ -1167,8 +1176,8 @@ function openDrawer(p){
       <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><div class="icht"><div class="ichl">Cost</div><div class="ichv">${p.cost||"Free"}</div></div></div>
     </div>
     <div class="dactions">
-      <button class="dactionbtn dab-orange" onclick="window.open('${p.website}','_blank')">Visit website ↗</button>
-      <button class="dactionbtn dab-outline" onclick="openMaps('${encodeURIComponent(p.address)}')">Directions 🗺️</button>
+      ${p.website&&p.website!=="#"?`<button class="dactionbtn dab-orange" onclick="window.open('${p.website}','_blank')">Visit website ↗</button>`:""}
+      <button class="dactionbtn dab-outline" onclick="openMaps('${encodeURIComponent(p.address||p.name)}')">Directions 🗺️</button>
     </div>`;
   document.getElementById("drawer").classList.add("open");
   document.getElementById("footstrip").classList.add("gone");
@@ -1176,6 +1185,7 @@ function openDrawer(p){
 function closeDrawer(){
   document.getElementById("drawer").classList.remove("open");
   document.getElementById("footstrip").classList.remove("gone");
+  // Don't null selectedId so re-clicking the same card still works
   selectedId=null;
   renderSidebar();
 }
