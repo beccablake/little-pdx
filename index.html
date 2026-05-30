@@ -274,7 +274,11 @@ body::before{
 .tag-food      {background:#FCEAEA;         color:#9B2020;border-color:rgba(155,32,32,0.2)}
 .tag-classes   {background:#F0EAFE;         color:#5230A0;border-color:rgba(82,48,160,0.2)}
 .tag-store     {background:#FDF0FF;         color:#6B2F8A;border-color:rgba(107,47,138,0.2)}
-.tag-splashpad {background:#E0F4FF;         color:#005F8A;border-color:rgba(0,95,138,0.2)}
+.tag-splashpad  {background:#E0F4FF;         color:#005F8A;border-color:rgba(0,95,138,0.2)}
+.tag-destination{background:#FFF0E0;         color:#8A4500;border-color:rgba(138,69,0,0.2)}
+.tag-hiking     {background:#E8F5E0;         color:#2D6A00;border-color:rgba(45,106,0,0.2)}
+.tag-swimming   {background:#E0EEFF;         color:#004F8A;border-color:rgba(0,79,138,0.2)}
+.tag-animals    {background:#FFF0F5;         color:#8A0050;border-color:rgba(138,0,80,0.2)}
 .tag-misc      {background:#F5F5F0;         color:#555548;border-color:rgba(85,85,72,0.2)}
 .tag-free      {background:#EDFFF5;         color:#0A6B3A;border-color:rgba(10,107,58,0.2)}
 
@@ -645,7 +649,7 @@ body::before{
       Change area
     </button>
     <button class="btn btn-outline btn-sm" onclick="openAdmin()">⚙ Admin</button>
-    <button class="btn btn-orange btn-sm" onclick="openModal('sponsor-modal')">✦ Get featured</button>
+    <button class="btn btn-orange btn-sm" onclick="openModal('advertise-modal')">✦ Founding rate: $49/mo</button>
   </div>
 </nav>
 
@@ -679,7 +683,11 @@ body::before{
 <div id="filterbar">
   <button class="pill active" data-f="all"        onclick="toggleFilter('all',this)">🗺 All</button>
   <button class="pill"        data-f="park"        onclick="toggleFilter('park',this)">🌲 Parks</button>
+  <button class="pill"        data-f="destination" onclick="toggleFilter('destination',this)">🏆 Destination playgrounds</button>
   <button class="pill"        data-f="splashpad"   onclick="toggleFilter('splashpad',this)">💦 Splash pads</button>
+  <button class="pill"        data-f="hiking"      onclick="toggleFilter('hiking',this)">🥾 Hiking</button>
+  <button class="pill"        data-f="swimming"    onclick="toggleFilter('swimming',this)">🏊 Swimming</button>
+  <button class="pill"        data-f="animals"     onclick="toggleFilter('animals',this)">🐾 Animals</button>
   <button class="pill"        data-f="bigkids"     onclick="toggleFilter('bigkids',this)">🏃 Big kids</button>
   <button class="pill"        data-f="littlekids"  onclick="toggleFilter('littlekids',this)">👶 Little kids</button>
   <button class="pill"        data-f="food"        onclick="toggleFilter('food',this)">🍕 Eat</button>
@@ -744,7 +752,7 @@ body::before{
 <div id="footstrip">
   <span class="fs-label">✦ Sponsor</span>
   <span class="fs-text" id="fs-text"></span>
-  <span class="fs-link" onclick="openModal('sponsor-modal')">Learn more →</span>
+  <span class="fs-link" id="fs-link" onclick="openModal('advertise-modal')">Learn more →</span>
   <button class="fs-x" onclick="dismissFoot()" title="Dismiss">✕</button>
 </div>
 
@@ -794,9 +802,11 @@ body::before{
         <div>📬 &nbsp;Mention in our monthly Recommended posts</div>
       </div>
     </div>
-    <div style="text-align:center;margin-bottom:16px">
+    <div style="text-align:center;margin-bottom:16px;background:var(--yellow-p);border:1.5px solid rgba(212,168,67,0.4);border-radius:var(--rl);padding:16px;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--yellow);margin-bottom:6px">✦ Founding Partner Rate</div>
       <div style="font-family:'Playfair Display',serif;font-size:34px;font-weight:900;color:var(--pine)">$49<span style="font-size:15px;font-weight:400;font-family:'Nunito',sans-serif;color:var(--navy-l)">/month</span></div>
-      <div style="font-size:11px;color:var(--navy-l);margin-top:3px">Cancel anytime · Local Oregon businesses only · We reserve the right to decline</div>
+      <div style="font-size:12px;color:var(--navy-m);margin-top:6px;line-height:1.5">Locked in for up to 12 months for our first 3 partners.<br>Price will increase after founding spots are filled.</div>
+      <div style="font-size:11px;color:var(--navy-l);margin-top:6px">Cancel anytime · Local Oregon businesses only · We reserve the right to decline</div>
     </div>
     <div class="fg"><label>Business name *</label><input type="text" id="adv-name" placeholder="Your business name"></div>
     <div class="fg"><label>Contact email *</label><input type="email" id="adv-email" placeholder="you@yourbusiness.com"></div>
@@ -901,7 +911,7 @@ let AIRTABLE_TOKEN = AIRTABLE_READ_TOKEN; // Write access upgraded when admin lo
 function recordToPlace(rec){
   const f = rec.fields;
   // Map Airtable tag labels back to internal keys
-  const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc"};
+  const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc","Destination playground":"destination","Hiking":"hiking","Swimming":"swimming","Animals":"animals"};
   const tags = (f.Tags||[]).map(t=>TAG_TO_KEY[t]||t.toLowerCase().replace(/\s+/g,""));
   return {
     id: rec.id,          // Airtable record ID
@@ -1025,7 +1035,7 @@ let map, markers = {};
 let zipBarOpen = false;
 let editingId = null;
 let nextId = 20;
-const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free"};
+const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free",destination:"Destination playground",hiking:"Hiking",swimming:"Swimming",animals:"Animals"};
 
 // ─── FILTER & MATCH ───────────────────────────────────────────────────────────
 function matches(p){
@@ -1266,11 +1276,21 @@ function goZip(){
 document.getElementById("zip-input").addEventListener("keydown",e=>{if(e.key==="Enter") goZip();});
 
 // ─── FOOTER STRIP ─────────────────────────────────────────────────────────────
+const HOUSE_MESSAGES = [
+  {text:"✦ Founding partner rate — be one of the first 3 businesses featured on Little PDX for just $49/month, locked in for up to 12 months.", cta:"Learn more →", action:"openModal('advertise-modal')"},
+  {text:"🏡 Is your favorite local spot missing from the map? We'd love your first-hand recommendation.", cta:"Suggest a place →", action:"openModal('suggest-modal')"},
+  {text:"📍 Want to reach local families actively searching for things to do? Get your business in front of the right people.", cta:"See how it works →", action:"openModal('advertise-modal')"}
+];
 let fsIdx=0;
 function rotateFoot(){
-  const active=SPONSORS.filter(s=>s.status==="active");
-  if(!active.length) return;
-  document.getElementById("fs-text").textContent=active[fsIdx%active.length].msg;
+  const activeSponsors=SPONSORS.filter(s=>s.status==="active");
+  const messages = activeSponsors.length
+    ? activeSponsors.map(s=>({text:s.msg, cta:"Learn more →", action:"openModal('advertise-modal')"}))
+    : HOUSE_MESSAGES;
+  const msg = messages[fsIdx % messages.length];
+  document.getElementById("fs-text").textContent = msg.text;
+  const link = document.getElementById("fs-link");
+  if(link){ link.textContent = msg.cta; link.setAttribute("onclick", msg.action); }
   fsIdx++;
 }
 function dismissFoot(){document.getElementById("footstrip").classList.add("gone");}
@@ -1425,7 +1445,7 @@ function renderApPlaces(body){
 
 function renderApForm(body){
   const p=editingId ? PLACES.find(x=>x.id===editingId) : null;
-  const allTags=["park","bigkids","littlekids","food","classes","store","splashpad","free","misc"];
+  const allTags=["park","destination","splashpad","hiking","swimming","animals","bigkids","littlekids","food","classes","store","free","misc"];
   body.innerHTML=`
     <div class="ap-form">
       <h4>${p?"Edit: "+p.name:"Add a new place"}</h4>
