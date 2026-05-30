@@ -1159,10 +1159,8 @@ function openDrawer(p){
     <div class="dtags">${p.tags.map(t=>`<span class="tag tag-${t}" style="font-size:12px;padding:4px 11px">${TAG_LABELS[t]||t}</span>`).join("")}</div>
     <div class="ddesc">${p.desc}</div>
     <div class="dinfogrid">
-      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><div class="icht"><div class="ichl">Address</div><div class="ichv">${p.address}</div></div></div>
-      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div class="icht"><div class="ichl">Hours</div><div class="ichv">${p.hours}</div></div></div>
-      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><div class="icht"><div class="ichl">Cost</div><div class="ichv">${p.cost}</div></div></div>
-      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><div class="icht"><div class="ichl">Best for</div><div class="ichv">${p.ageRange}</div></div></div>
+      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><div class="icht"><div class="ichl">Address</div><div class="ichv">${p.address||"See website"}</div></div></div>
+      <div class="ichip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><div class="icht"><div class="ichl">Cost</div><div class="ichv">${p.cost||"Free"}</div></div></div>
     </div>
     <div class="dactions">
       <button class="dactionbtn dab-orange" onclick="window.open('${p.website}','_blank')">Visit website ↗</button>
@@ -1303,13 +1301,25 @@ function submitSponsor(){openModal("advertise-modal");}
 const ADMIN_PASSWORD = "littlepdx2026";
 let adminUnlocked = false;
 function openAdmin(){
+  // Check if already unlocked this session
   if(adminUnlocked){
     document.getElementById("admin-overlay").classList.add("on");
     apTab("places",document.querySelector(".ap-tab"));
-  } else {
-    document.getElementById("admin-gate").classList.add("on");
-    setTimeout(()=>document.getElementById("gate-pw").focus(),100);
+    return;
   }
+  // Try to restore from sessionStorage (persists until tab is closed)
+  const savedToken = sessionStorage.getItem("lpdx_token");
+  const savedPw = sessionStorage.getItem("lpdx_auth");
+  if(savedToken && savedPw === "ok"){
+    adminUnlocked = true;
+    AIRTABLE_TOKEN = savedToken;
+    document.getElementById("admin-overlay").classList.add("on");
+    apTab("places",document.querySelector(".ap-tab"));
+    return;
+  }
+  // Otherwise show gate
+  document.getElementById("admin-gate").classList.add("on");
+  setTimeout(()=>document.getElementById("gate-pw").focus(),100);
 }
 function checkGate(){
   const pw = document.getElementById("gate-pw").value;
@@ -1317,13 +1327,15 @@ function checkGate(){
   if(pw === ADMIN_PASSWORD){
     adminUnlocked = true;
     AIRTABLE_TOKEN = token;
+    // Save to sessionStorage so they don't have to re-enter until tab closes
+    sessionStorage.setItem("lpdx_token", token);
+    sessionStorage.setItem("lpdx_auth", "ok");
     document.getElementById("admin-gate").classList.remove("on");
     document.getElementById("gate-pw").value = "";
     document.getElementById("gate-token").value = "";
     document.getElementById("gate-error").classList.remove("on");
     document.getElementById("admin-overlay").classList.add("on");
     apTab("places",document.querySelector(".ap-tab"));
-    // Fetch latest from Airtable
     if(AIRTABLE_TOKEN) fetchFromAirtable();
   } else {
     document.getElementById("gate-error").classList.add("on");
@@ -1395,28 +1407,28 @@ function renderApForm(body){
         <div class="fg"><label>Emoji icon</label>
         <select id="af-emoji" style="font-size:16px;padding:6px 10px;width:100%">
           <optgroup label="⭐ Most relevant">
-            ${["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","☕","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e} ${e}</option>`).join("")}
+            ${["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","☕","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
           </optgroup>
           <optgroup label="🌿 Nature & outdoors">
-            ${["🌲","🌳","🌴","🌵","🌾","🌿","🍀","🍁","🍂","🍃","🌱","🌸","🌺","🌻","🌼","🌷","🍄","🌊","🏔","⛰","🗻","🏕","🏖","🏝","🌅","🌄","🌈","⛅","🌤","☀️","🌙","⭐","❄️","🌬","🌧","⛈","🌪","🌫"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e} ${e}</option>`).join("")}
+            ${["🌲","🌳","🌴","🌵","🌾","🌿","🍀","🍁","🍂","🍃","🌱","🌸","🌺","🌻","🌼","🌷","🍄","🌊","🏔","⛰","🗻","🏕","🏖","🏝","🌅","🌄","🌈","⛅","🌤","☀️","🌙","⭐","❄️","🌬","🌧","⛈","🌪","🌫"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
           </optgroup>
           <optgroup label="🦅 Animals">
-            ${["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🐤","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🐛","🦋","🐌","🐞","🐜","🦟","🦗","🦂","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🦣","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐈","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐿","🦔"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e} ${e}</option>`).join("")}
+            ${["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🐤","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🐛","🦋","🐌","🐞","🐜","🦟","🦗","🦂","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🦣","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐈","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐿","🦔"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
           </optgroup>
           <optgroup label="🍕 Food & drink">
-            ${["🍕","🍔","🌮","🌯","🥙","🧆","🥚","🍳","🥘","🍲","🫕","🥗","🍿","🧂","🥫","🍱","🍘","🍙","🍚","🍛","🍜","🍝","🍠","🍢","🍣","🍤","🍥","🥮","🍡","🧁","🎂","🍰","🍦","🍧","🍨","🍩","🍪","🍫","🍬","🍭","🍮","🍯","🍼","🥛","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊","🥄","🍴","🍽","🥢","🧇","🥞","🧈","🍞","🥐","🥖","🫓","🥨","🥯","🧀","🥩","🥓","🌭","🍟","🍖","🌽","🥕","🧄","🧅","🥔","🍠","🥜","🫘","🌰","🍞","🍇","🍈","🍉","🍊","🍋","🍌","🍍","🥭","🍎","🍏","🍐","🍑","🍒","🍓","🫐","🥝","🍅","🫒","🥥","🥑","🍆","🥦","🥬","🥒","🌶","🫑","🧄"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e} ${e}</option>`).join("")}
+            ${["🍕","🍔","🌮","🌯","🥙","🧆","🥚","🍳","🥘","🍲","🫕","🥗","🍿","🧂","🥫","🍱","🍘","🍙","🍚","🍛","🍜","🍝","🍠","🍢","🍣","🍤","🍥","🥮","🍡","🧁","🎂","🍰","🍦","🍧","🍨","🍩","🍪","🍫","🍬","🍭","🍮","🍯","🍼","🥛","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊","🥄","🍴","🍽","🥢","🧇","🥞","🧈","🍞","🥐","🥖","🫓","🥨","🥯","🧀","🥩","🥓","🌭","🍟","🍖","🌽","🥕","🧄","🧅","🥔","🍠","🥜","🫘","🌰","🍞","🍇","🍈","🍉","🍊","🍋","🍌","🍍","🥭","🍎","🍏","🍐","🍑","🍒","🍓","🫐","🥝","🍅","🫒","🥥","🥑","🍆","🥦","🥬","🥒","🌶","🫑","🧄"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
           </optgroup>
           <optgroup label="⚽ Activities & sports">
-            ${["⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🥍","🏑","🏏","🪃","🥅","⛳","🪁","🎣","🤿","🎽","🎿","🛷","🥌","🎯","🪄","🎮","🕹","🎲","🎰","🎳","🏋","🤼","🤸","⛹","🤺","🏇","⛷","🏂","🪂","🏄","🚣","🧗","🚵","🚴","🏊","🤽","🚀","🛝","🎡","🎢","🎠","🎪","🎭","🎨","🎬","🎤","🎧","🎼","🎵","🎶","🎹","🥁","🎷","🎺","🎸","🪕","🎻","🎲","♟","🎭","🎨","🖼","🎰","🚂","✈️","🚁","⛵","🚤","🛶","🏊","🤽","🚵","🚴","🛹","🛼","🛺","🚲","🛵","🏍","🚗"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e} ${e}</option>`).join("")}
+            ${["⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🥍","🏑","🏏","🪃","🥅","⛳","🪁","🎣","🤿","🎽","🎿","🛷","🥌","🎯","🪄","🎮","🕹","🎲","🎰","🎳","🏋","🤼","🤸","⛹","🤺","🏇","⛷","🏂","🪂","🏄","🚣","🧗","🚵","🚴","🏊","🤽","🚀","🛝","🎡","🎢","🎠","🎪","🎭","🎨","🎬","🎤","🎧","🎼","🎵","🎶","🎹","🥁","🎷","🎺","🎸","🪕","🎻","🎲","♟","🎭","🎨","🖼","🎰","🚂","✈️","🚁","⛵","🚤","🛶","🏊","🤽","🚵","🚴","🛹","🛼","🛺","🚲","🛵","🏍","🚗"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
           </optgroup>
           <optgroup label="🏫 Places & buildings">
-            ${["🏠","🏡","🏢","🏣","🏤","🏥","🏦","🏧","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","🕍","⛩","🕋","⛲","⛺","🏕","🏗","🧱","🪨","🪵","🛖","🏘","🏚","🏛","🏟","🏠","🗺","🧭","🏔","⛰","🌋","🗻","🏕","🏖","🏜","🏝","🏞","🏟","🌁","🌃","🏙","🌄","🌅","🌆","🌇","🌉","🌌","🌠","🎇","🎆","🗺","🧭"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e} ${e}</option>`).join("")}
+            ${["🏠","🏡","🏢","🏣","🏤","🏥","🏦","🏧","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","🕍","⛩","🕋","⛲","⛺","🏕","🏗","🧱","🪨","🪵","🛖","🏘","🏚","🏛","🏟","🏠","🗺","🧭","🏔","⛰","🌋","🗻","🏕","🏖","🏜","🏝","🏞","🏟","🌁","🌃","🏙","🌄","🌅","🌆","🌇","🌉","🌌","🌠","🎇","🎆","🗺","🧭"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
           </optgroup>
           <optgroup label="👶 People & family">
-            ${["👶","🧒","👦","👧","🧑","👱","👨","🧔","👩","🧓","👴","👵","👮","💂","🕵","👷","🤴","👸","🧙","🧚","🧛","🧜","🧝","🧞","🧟","🧌","💆","💇","🚶","🧍","🧎","🏃","💃","🕺","🧖","🧗","🏇","🏋","⛹","🤺","🤼","🤸","🏌","🏄","🚣","🏊","⛷","🏂","🪂","🚵","🚴","🏆","🥇","🥈","🥉","🏅","🎖","🎗","🎫","🎟","🎪","🤹","🎭","🎨","🎬","🎤","🎧","🎼","🎵","🎶","🎹","🥁","🎷","🎺","🎸"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e} ${e}</option>`).join("")}
+            ${["👶","🧒","👦","👧","🧑","👱","👨","🧔","👩","🧓","👴","👵","👮","💂","🕵","👷","🤴","👸","🧙","🧚","🧛","🧜","🧝","🧞","🧟","🧌","💆","💇","🚶","🧍","🧎","🏃","💃","🕺","🧖","🧗","🏇","🏋","⛹","🤺","🤼","🤸","🏌","🏄","🚣","🏊","⛷","🏂","🪂","🚵","🚴","🏆","🥇","🥈","🥉","🏅","🎖","🎗","🎫","🎟","🎪","🤹","🎭","🎨","🎬","🎤","🎧","🎼","🎵","🎶","🎹","🥁","🎷","🎺","🎸"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
           </optgroup>
           <optgroup label="✨ Symbols & misc">
-            ${["⭐","🌟","✨","💫","🔥","💥","❄️","🌈","☀️","🌙","⚡","💧","🌊","🎯","🎁","🎀","🎊","🎉","🎈","🎏","🎐","🎑","🧧","🎃","🎄","🎆","🎇","✅","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💯","🔑","🗝","🔒","🔓","🔔","🔕","📍","📌","🚩","🏁","🏳","🏴","🚀","💡","🔦","🕯","🧲","🔭","🔬","💎","🪙","💰","🛒","🎒","🧳","👜","👛","🎓","📚","📖","📝","✏️","🖊","🖋","📅","🗓","📊","📈","📉","🗺","🧭","🔮","🪬","🧿","🪩","🎴","🀄","🎭","🎨","🖼","🧸","🪆","🪅","🎎","🎍","🎋","🎍","🪁","🎣","🤿"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e} ${e}</option>`).join("")}
+            ${["⭐","🌟","✨","💫","🔥","💥","❄️","🌈","☀️","🌙","⚡","💧","🌊","🎯","🎁","🎀","🎊","🎉","🎈","🎏","🎐","🎑","🧧","🎃","🎄","🎆","🎇","✅","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💯","🔑","🗝","🔒","🔓","🔔","🔕","📍","📌","🚩","🏁","🏳","🏴","🚀","💡","🔦","🕯","🧲","🔭","🔬","💎","🪙","💰","🛒","🎒","🧳","👜","👛","🎓","📚","📖","📝","✏️","🖊","🖋","📅","🗓","📊","📈","📉","🗺","🧭","🔮","🪬","🧿","🪩","🎴","🀄","🎭","🎨","🖼","🧸","🪆","🪅","🎎","🎍","🎋","🎍","🪁","🎣","🤿"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
           </optgroup>
         </select></div>
         <div class="fg"><label>Name *</label><input id="af-name" type="text" value="${p?p.name:""}" placeholder="Place name"></div>
@@ -1435,16 +1447,8 @@ function renderApForm(body){
       <div style="font-size:11px;color:var(--navy-l);margin-top:-6px;margin-bottom:12px">💡 Right-click any spot on Google Maps → "What's here?" to get lat/lng.</div>
       <div class="ap-section-label">Details</div>
       <div class="fg-row">
-        <div class="fg"><label>Hours</label><input id="af-hours" type="text" value="${p?p.hours:""}" placeholder="e.g. 9am–5pm daily"></div>
         <div class="fg"><label>Cost</label><input id="af-cost" type="text" value="${p?p.cost:""}" placeholder="Free, $, $$, $$$"></div>
-      </div>
-      <div class="fg-row">
-        <div class="fg"><label>Best age range</label><input id="af-age" type="text" value="${p?p.ageRange:""}" placeholder="All ages"></div>
         <div class="fg"><label>Website</label><input id="af-web" type="text" value="${p?p.website:"#"}" placeholder="https://…"></div>
-      </div>
-      <div class="fg-row">
-        <div class="fg"><label>Rating (1–5)</label><input id="af-rating" type="number" min="1" max="5" step="0.1" value="${p?p.rating:4.5}"></div>
-        <div class="fg"><label>Review count</label><input id="af-reviews" type="number" value="${p?p.reviews:0}"></div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <input type="checkbox" id="af-featured" ${p&&p.featured?"checked":""} style="width:16px;height:16px;accent-color:var(--orange)">
