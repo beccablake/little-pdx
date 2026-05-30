@@ -162,11 +162,22 @@ body::before{
 .adstrip-link:hover{color:var(--pine)}
 
 /* ─── FILTER BAR ────────────────────────────────────────────────── */
-#filterbar{
+#filterbar-wrap{
   position:sticky;top:60px;z-index:900;
-  height:52px;display:flex;align-items:center;gap:8px;padding:0 20px;
   background:rgba(245,242,236,0.97);backdrop-filter:blur(8px);
-  border-bottom:1px solid var(--border);overflow-x:auto;
+  border-bottom:1px solid var(--border);
+  position:sticky;
+}
+#filterbar-wrap::after{
+  content:'';position:absolute;top:0;right:0;bottom:0;width:48px;
+  background:linear-gradient(to right, transparent, rgba(245,242,236,0.97));
+  pointer-events:none;z-index:1;
+}
+#filterbar{
+  top:0;z-index:900;
+  height:52px;display:flex;align-items:center;gap:8px;padding:0 20px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
 }
 #filterbar::-webkit-scrollbar{display:none}
 .pill{
@@ -279,6 +290,9 @@ body::before{
 .tag-hiking     {background:#E8F5E0;         color:#2D6A00;border-color:rgba(45,106,0,0.2)}
 .tag-swimming   {background:#E0EEFF;         color:#004F8A;border-color:rgba(0,79,138,0.2)}
 .tag-animals    {background:#FFF0F5;         color:#8A0050;border-color:rgba(138,0,80,0.2)}
+.tag-daytrip    {background:#F0F0FF;         color:#3D3DA0;border-color:rgba(61,61,160,0.2)}
+.tag-biking     {background:#FFF8E0;         color:#7A5C00;border-color:rgba(122,92,0,0.2)}
+.tag-indoor     {background:#F0E8FF;         color:#5A00A0;border-color:rgba(90,0,160,0.2)}
 .tag-misc      {background:#F5F5F0;         color:#555548;border-color:rgba(85,85,72,0.2)}
 .tag-free      {background:#EDFFF5;         color:#0A6B3A;border-color:rgba(10,107,58,0.2)}
 
@@ -622,6 +636,10 @@ body::before{
 .noresults h4{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:5px}
 .noresults p{font-size:13px;color:var(--navy-m)}
 
+/* ─── EMOJI PICKER ───────────────────────────────────────────────── */
+#emoji-picker{display:none;background:white;border:1.5px solid var(--border-m);border-radius:var(--rl);padding:12px;max-height:260px;overflow-y:auto;margin-bottom:12px}
+#emoji-picker.open{display:block}
+
 /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
 @media(max-width:680px){
   #sidebar{display:none}
@@ -662,7 +680,7 @@ body::before{
       <p class="hero-tagline">Your minimalist resource for kid-friendly adventures in the PDX area.</p>
       <div class="hero-actions">
         <button class="btn btn-pine" onclick="document.getElementById('filterbar').scrollIntoView({behavior:'smooth'})">Explore the map ↓</button>
-        <button class="btn btn-ghost-pine" onclick="openModal('suggest-modal')">Suggest a place</button>
+        <button class="btn btn-ghost-pine" onclick="openSuggestNew()">Suggest a place</button>
       </div>
     </div>
 
@@ -680,6 +698,7 @@ body::before{
 </div>
 
 <!-- FILTER BAR -->
+<div id="filterbar-wrap">
 <div id="filterbar">
   <button class="pill active" data-f="all"        onclick="toggleFilter('all',this)">🗺 All</button>
   <button class="pill"        data-f="park"        onclick="toggleFilter('park',this)">🌲 Parks</button>
@@ -688,6 +707,9 @@ body::before{
   <button class="pill"        data-f="hiking"      onclick="toggleFilter('hiking',this)">🥾 Hiking</button>
   <button class="pill"        data-f="swimming"    onclick="toggleFilter('swimming',this)">🏊 Swimming</button>
   <button class="pill"        data-f="animals"     onclick="toggleFilter('animals',this)">🐾 Animals</button>
+  <button class="pill"        data-f="daytrip"     onclick="toggleFilter('daytrip',this)">🚗 Day trip</button>
+  <button class="pill"        data-f="biking"      onclick="toggleFilter('biking',this)">🚲 Biking</button>
+  <button class="pill"        data-f="indoor"      onclick="toggleFilter('indoor',this)">🏠 Indoor play</button>
   <button class="pill"        data-f="bigkids"     onclick="toggleFilter('bigkids',this)">🏃 Big kids</button>
   <button class="pill"        data-f="littlekids"  onclick="toggleFilter('littlekids',this)">👶 Little kids</button>
   <button class="pill"        data-f="food"        onclick="toggleFilter('food',this)">🍕 Eat</button>
@@ -721,7 +743,7 @@ body::before{
     <div class="sb-head">
       <span class="sb-count" id="sb-count">Loading…</span>
       <select class="sb-sort" id="sb-sort" onchange="renderAll()">
-        <option value="rating">Top rated</option>
+        <option value="nearest">Nearest first</option>
         <option value="name">A – Z</option>
         <option value="featured">Featured first</option>
       </select>
@@ -757,7 +779,7 @@ body::before{
 </div>
 
 <!-- SUGGEST BTN -->
-<button id="suggestbtn" onclick="openModal('suggest-modal')">
+<button id="suggestbtn" onclick="openSuggestNew()">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   Suggest a place
 </button>
@@ -765,25 +787,26 @@ body::before{
 <!-- SUGGEST A LISTING MODAL -->
 <div class="overlay" id="suggest-modal">
   <div class="modal">
-    <h3>Suggest a listing 🌲</h3>
-    <p class="sub">Know a great spot that isn't on the map yet? We review every submission and add the good ones. We'll credit you if you leave your name!</p>
-    <div class="fg"><label>Place name *</label><input type="text" id="sg-name" placeholder="e.g. Tualatin Hills Nature Park"></div>
-    <div class="fg-row">
+    <h3 id="sg-title">Suggest a listing 🌲</h3>
+    <p class="sub" id="sg-sub">Know a great spot that isn't on the map yet? We review every submission and add the good ones. We'll credit you if you leave your name!</p>
+    <input type="hidden" id="sg-listing-id" value="">
+    <div id="sg-name-row" class="fg"><label id="sg-name-label">Place name *</label><input type="text" id="sg-name" placeholder="e.g. Tualatin Hills Nature Park"></div>
+    <div id="sg-cat-row" class="fg-row">
       <div class="fg"><label>Category</label><select id="sg-cat"><option>Park</option><option>Splash Pad</option><option>Restaurant</option><option>Class / Activity</option><option>Store</option><option>Playground</option><option>Other</option></select></div>
       <div class="fg"><label>Best for</label><select id="sg-age"><option>All ages</option><option>Little kids (0–5)</option><option>Big kids (6–12)</option><option>Both</option></select></div>
     </div>
-    <div class="fg"><label>Address (helps us find it)</label><input type="text" id="sg-addr" placeholder="Street, City, OR"></div>
-    <div class="fg"><label>Why do you love it? *</label><textarea id="sg-why" placeholder="What makes it special? Tips for first-timers, best time to visit…"></textarea></div>
+    <div id="sg-addr-row" class="fg"><label>Address (helps us find it)</label><input type="text" id="sg-addr" placeholder="Street, City, OR"></div>
+    <div class="fg"><label id="sg-why-label">Why do you love it? *</label><textarea id="sg-why" placeholder="What makes it special? Tips for first-timers, best time to visit…"></textarea></div>
     <div class="fg-row">
       <div class="fg"><label>Your name (optional)</label><input type="text" id="sg-yourname" placeholder="First name is fine"></div>
       <div class="fg"><label>Your email (optional)</label><input type="email" id="sg-email" placeholder="To notify you when it's live"></div>
     </div>
     <div style="background:var(--mist);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--navy-m);margin-bottom:4px">
-      📋 All suggestions go to our review queue — we'll check it out and add it to the map if it's a good fit.
+      📋 All suggestions go to our review queue — we'll check it out and get back to you.
     </div>
     <div class="modal-btns">
       <button class="btn btn-outline" onclick="closeModal('suggest-modal')">Cancel</button>
-      <button class="btn btn-pine" onclick="submitSuggest()">Send suggestion →</button>
+      <button class="btn btn-pine" onclick="submitSuggest()">Send →</button>
     </div>
   </div>
 </div>
@@ -911,7 +934,7 @@ let AIRTABLE_TOKEN = AIRTABLE_READ_TOKEN; // Write access upgraded when admin lo
 function recordToPlace(rec){
   const f = rec.fields;
   // Map Airtable tag labels back to internal keys
-  const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc","Destination playground":"destination","Hiking":"hiking","Swimming":"swimming","Animals":"animals"};
+  const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc","Destination playground":"destination","Hiking":"hiking","Swimming":"swimming","Animals":"animals","Day trip":"daytrip","Biking":"biking","Indoor play":"indoor"};
   const tags = (f.Tags||[]).map(t=>TAG_TO_KEY[t]||t.toLowerCase().replace(/\s+/g,""));
   return {
     id: rec.id,          // Airtable record ID
@@ -1035,7 +1058,7 @@ let map, markers = {};
 let zipBarOpen = false;
 let editingId = null;
 let nextId = 20;
-const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free",destination:"Destination playground",hiking:"Hiking",swimming:"Swimming",animals:"Animals"};
+const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free",destination:"Destination playground",hiking:"Hiking",swimming:"Swimming",animals:"Animals",daytrip:"Day trip",biking:"Biking",indoor:"Indoor play"};
 
 // ─── FILTER & MATCH ───────────────────────────────────────────────────────────
 function matches(p){
@@ -1055,10 +1078,28 @@ function toggleFilter(f,btn){
   document.querySelectorAll(".pill").forEach(b=>b.classList.toggle("active",activeFilters.has(b.dataset.f)));
   renderAll();
 }
+// ─── DISTANCE SORT ────────────────────────────────────────────────────────────
+function distKm(lat1,lng1,lat2,lng2){
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function getMapCenter(){ return map ? map.getCenter() : {lat:45.485,lng:-122.800}; }
+
 function sorted(list){
   const s=document.getElementById("sb-sort").value;
   const c=[...list];
-  if(s==="rating") return c.sort((a,b)=>(b.featured-a.featured)||((b.rating||0)-(a.rating||0)));
+  if(s==="nearest"){
+    const center=getMapCenter();
+    return c.sort((a,b)=>{
+      const da=distKm(center.lat,center.lng,a.lat,a.lng);
+      const db=distKm(center.lat,center.lng,b.lat,b.lng);
+      // Featured places get a small boost — appear if within 2x distance
+      const fa = a.featured ? da*0.5 : da;
+      const fb = b.featured ? db*0.5 : db;
+      return fa-fb;
+    });
+  }
   if(s==="name") return c.sort((a,b)=>a.name.localeCompare(b.name));
   if(s==="featured") return c.sort((a,b)=>b.featured-a.featured||(b.rating||0)-(a.rating||0));
   return c;
@@ -1195,6 +1236,11 @@ function openDrawer(p){
     <div class="dactions">
       ${p.website&&p.website!=="#"?`<button class="dactionbtn dab-orange" onclick="window.open('${p.website}','_blank')">Visit website ↗</button>`:""}
       <button class="dactionbtn dab-outline" onclick="openMaps('${encodeURIComponent(p.address||p.name)}')">Directions 🗺️</button>
+    </div>
+    <div style="text-align:center;margin-top:10px">
+      <button onclick="openSuggestForPlace('${p.id}','${p.name.replace(/'/g,"&#39;")}')" style="background:none;border:none;font-size:12px;color:var(--navy-l);cursor:pointer;font-family:'Nunito',sans-serif;text-decoration:underline;text-underline-offset:2px">
+        ✏️ Suggest a correction or addition
+      </button>
     </div>`;
   document.getElementById("drawer").classList.add("open");
   document.getElementById("footstrip").classList.add("gone");
@@ -1278,7 +1324,7 @@ document.getElementById("zip-input").addEventListener("keydown",e=>{if(e.key==="
 // ─── FOOTER STRIP ─────────────────────────────────────────────────────────────
 const HOUSE_MESSAGES = [
   {text:"✦ Founding partner rate — be one of the first 3 businesses featured on Little PDX for just $49/month, locked in for up to 12 months.", cta:"Learn more →", action:"openModal('advertise-modal')"},
-  {text:"🏡 Is your favorite local spot missing from the map? We'd love your first-hand recommendation.", cta:"Suggest a place →", action:"openModal('suggest-modal')"},
+  {text:"🏡 Is your favorite local spot missing from the map? We'd love your first-hand recommendation.", cta:"Suggest a place →", action:"openSuggestNew()"},
   {text:"📍 Want to reach local families actively searching for things to do? Get your business in front of the right people.", cta:"See how it works →", action:"openModal('advertise-modal')"}
 ];
 let fsIdx=0;
@@ -1300,7 +1346,58 @@ rotateFoot(); setInterval(rotateFoot,7000);
 function openModal(id){document.getElementById(id).classList.add("on");}
 function closeModal(id){document.getElementById(id).classList.remove("on");}
 document.querySelectorAll(".overlay").forEach(el=>el.addEventListener("click",e=>{if(e.target===el) el.classList.remove("on");}));
+function openSuggestForPlace(id, name){
+  // Switch modal to "correction" mode
+  document.getElementById("sg-title").textContent = "Suggest a correction ✏️";
+  document.getElementById("sg-sub").textContent = `Have something to add or correct about ${name}? We'll review it and update the listing.`;
+  document.getElementById("sg-listing-id").value = id;
+  document.getElementById("sg-name").value = name;
+  document.getElementById("sg-name-label").textContent = "Listing name";
+  document.getElementById("sg-why-label").textContent = "What should we add or fix? *";
+  document.getElementById("sg-why").placeholder = "e.g. The splash pad opens May 1st, not June. There's also a great accessible path…";
+  // Hide category/address rows since it's a correction not a new listing
+  document.getElementById("sg-cat-row").style.display = "none";
+  document.getElementById("sg-addr-row").style.display = "none";
+  openModal("suggest-modal");
+}
+function openSuggestNew(){
+  // Reset to "new listing" mode
+  document.getElementById("sg-title").textContent = "Suggest a listing 🌲";
+  document.getElementById("sg-sub").textContent = "Know a great spot that isn't on the map yet? We review every submission and add the good ones.";
+  document.getElementById("sg-listing-id").value = "";
+  document.getElementById("sg-name").value = "";
+  document.getElementById("sg-name-label").textContent = "Place name *";
+  document.getElementById("sg-why-label").textContent = "Why do you love it? *";
+  document.getElementById("sg-why").placeholder = "What makes it special? Tips for first-timers, best time to visit…";
+  document.getElementById("sg-cat-row").style.display = "";
+  document.getElementById("sg-addr-row").style.display = "";
+  openModal("suggest-modal");
+}
 function submitSuggest(){
+  const name=document.getElementById("sg-name").value.trim();
+  const why=document.getElementById("sg-why").value.trim();
+  const listingId=document.getElementById("sg-listing-id").value;
+  if(!name){alert("Please enter a place name.");return;}
+  if(!why){alert("Please fill in the details field.");return;}
+  SUGGESTIONS.unshift({
+    id:Date.now(), name,
+    type: listingId ? "correction" : "new",
+    linkedId: listingId || null,
+    cat: document.getElementById("sg-cat").value,
+    age: document.getElementById("sg-age").value,
+    addr: document.getElementById("sg-addr")?document.getElementById("sg-addr").value:"",
+    why,
+    submitter: document.getElementById("sg-yourname")?document.getElementById("sg-yourname").value:"",
+    email: document.getElementById("sg-email").value,
+    status:"pending"
+  });
+  closeModal("suggest-modal");
+  ["sg-name","sg-addr","sg-why","sg-yourname","sg-email"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  document.getElementById("sg-cat-row").style.display="";
+  document.getElementById("sg-addr-row").style.display="";
+  document.getElementById("sg-listing-id").value="";
+  alert(listingId?"Thanks for the note! We'll review it and update the listing. ✏️":"Thanks for the suggestion! We review everything and will reach out if we add it. 🌲");
+}
   const name=document.getElementById("sg-name").value.trim();
   const why=document.getElementById("sg-why").value.trim();
   if(!name){alert("Please enter a place name.");return;}
@@ -1445,40 +1542,36 @@ function renderApPlaces(body){
 
 function renderApForm(body){
   const p=editingId ? PLACES.find(x=>x.id===editingId) : null;
-  const allTags=["park","destination","splashpad","hiking","swimming","animals","bigkids","littlekids","food","classes","store","free","misc"];
+  const allTags=["park","destination","splashpad","hiking","swimming","animals","daytrip","biking","indoor","bigkids","littlekids","food","classes","store","free","misc"];
   body.innerHTML=`
     <div class="ap-form">
       <h4>${p?"Edit: "+p.name:"Add a new place"}</h4>
       <div class="ap-section-label">Basic info</div>
       <div class="fg-row">
-        <div class="fg"><label>Emoji icon</label>
-        <select id="af-emoji" style="font-size:16px;padding:6px 10px;width:100%">
-          <optgroup label="⭐ Most relevant">
-            ${["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","☕","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
-          </optgroup>
-          <optgroup label="🌿 Nature & outdoors">
-            ${["🌲","🌳","🌴","🌵","🌾","🌿","🍀","🍁","🍂","🍃","🌱","🌸","🌺","🌻","🌼","🌷","🍄","🌊","🏔","⛰","🗻","🏕","🏖","🏝","🌅","🌄","🌈","⛅","🌤","☀️","🌙","⭐","❄️","🌬","🌧","⛈","🌪","🌫"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
-          </optgroup>
-          <optgroup label="🦅 Animals">
-            ${["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🐤","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🐛","🦋","🐌","🐞","🐜","🦟","🦗","🦂","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🦣","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐈","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐿","🦔"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
-          </optgroup>
-          <optgroup label="🍕 Food & drink">
-            ${["🍕","🍔","🌮","🌯","🥙","🧆","🥚","🍳","🥘","🍲","🫕","🥗","🍿","🧂","🥫","🍱","🍘","🍙","🍚","🍛","🍜","🍝","🍠","🍢","🍣","🍤","🍥","🥮","🍡","🧁","🎂","🍰","🍦","🍧","🍨","🍩","🍪","🍫","🍬","🍭","🍮","🍯","🍼","🥛","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊","🥄","🍴","🍽","🥢","🧇","🥞","🧈","🍞","🥐","🥖","🫓","🥨","🥯","🧀","🥩","🥓","🌭","🍟","🍖","🌽","🥕","🧄","🧅","🥔","🍠","🥜","🫘","🌰","🍞","🍇","🍈","🍉","🍊","🍋","🍌","🍍","🥭","🍎","🍏","🍐","🍑","🍒","🍓","🫐","🥝","🍅","🫒","🥥","🥑","🍆","🥦","🥬","🥒","🌶","🫑","🧄"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
-          </optgroup>
-          <optgroup label="⚽ Activities & sports">
-            ${["⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🥍","🏑","🏏","🪃","🥅","⛳","🪁","🎣","🤿","🎽","🎿","🛷","🥌","🎯","🪄","🎮","🕹","🎲","🎰","🎳","🏋","🤼","🤸","⛹","🤺","🏇","⛷","🏂","🪂","🏄","🚣","🧗","🚵","🚴","🏊","🤽","🚀","🛝","🎡","🎢","🎠","🎪","🎭","🎨","🎬","🎤","🎧","🎼","🎵","🎶","🎹","🥁","🎷","🎺","🎸","🪕","🎻","🎲","♟","🎭","🎨","🖼","🎰","🚂","✈️","🚁","⛵","🚤","🛶","🏊","🤽","🚵","🚴","🛹","🛼","🛺","🚲","🛵","🏍","🚗"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
-          </optgroup>
-          <optgroup label="🏫 Places & buildings">
-            ${["🏠","🏡","🏢","🏣","🏤","🏥","🏦","🏧","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","🕍","⛩","🕋","⛲","⛺","🏕","🏗","🧱","🪨","🪵","🛖","🏘","🏚","🏛","🏟","🏠","🗺","🧭","🏔","⛰","🌋","🗻","🏕","🏖","🏜","🏝","🏞","🏟","🌁","🌃","🏙","🌄","🌅","🌆","🌇","🌉","🌌","🌠","🎇","🎆","🗺","🧭"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
-          </optgroup>
-          <optgroup label="👶 People & family">
-            ${["👶","🧒","👦","👧","🧑","👱","👨","🧔","👩","🧓","👴","👵","👮","💂","🕵","👷","🤴","👸","🧙","🧚","🧛","🧜","🧝","🧞","🧟","🧌","💆","💇","🚶","🧍","🧎","🏃","💃","🕺","🧖","🧗","🏇","🏋","⛹","🤺","🤼","🤸","🏌","🏄","🚣","🏊","⛷","🏂","🪂","🚵","🚴","🏆","🥇","🥈","🥉","🏅","🎖","🎗","🎫","🎟","🎪","🤹","🎭","🎨","🎬","🎤","🎧","🎼","🎵","🎶","🎹","🥁","🎷","🎺","🎸"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
-          </optgroup>
-          <optgroup label="✨ Symbols & misc">
-            ${["⭐","🌟","✨","💫","🔥","💥","❄️","🌈","☀️","🌙","⚡","💧","🌊","🎯","🎁","🎀","🎊","🎉","🎈","🎏","🎐","🎑","🧧","🎃","🎄","🎆","🎇","✅","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💯","🔑","🗝","🔒","🔓","🔔","🔕","📍","📌","🚩","🏁","🏳","🏴","🚀","💡","🔦","🕯","🧲","🔭","🔬","💎","🪙","💰","🛒","🎒","🧳","👜","👛","🎓","📚","📖","📝","✏️","🖊","🖋","📅","🗓","📊","📈","📉","🗺","🧭","🔮","🪬","🧿","🪩","🎴","🀄","🎭","🎨","🖼","🧸","🪆","🪅","🎎","🎍","🎋","🎍","🪁","🎣","🤿"].map(e=>`<option value="${e}" ${p&&p.emoji===e?"selected":""}>${e}</option>`).join("")}
-          </optgroup>
-        </select></div>
+        <div class="fg" style="flex:0 0 auto">
+          <label>Emoji icon</label>
+          <div id="af-emoji-display" style="width:52px;height:52px;font-size:28px;border:1.5px solid var(--border-m);border-radius:var(--r);background:white;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.15s" onclick="document.getElementById('emoji-picker').classList.toggle('open')">${p?p.emoji:"🌟"}</div>
+          <input type="hidden" id="af-emoji" value="${p?p.emoji:"🌟"}">
+        </div>
         <div class="fg"><label>Name *</label><input id="af-name" type="text" value="${p?p.name:""}" placeholder="Place name"></div>
+      </div>
+      <!-- Emoji picker grid -->
+      <div id="emoji-picker" style="display:none;margin-bottom:12px">
+        ${[
+          {label:"⭐ Suggested", emojis:["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","☕","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔","🥾","🏊","🐾","🦆","🌲","🎭"]},
+          {label:"🌿 Nature", emojis:["🌲","🌳","🌴","🌵","🌾","🌿","🍀","🍁","🍂","🌱","🌸","🌺","🌻","🌼","🌷","🍄","🌊","🏔","⛰","🏕","🏖","🌅","🌄","🌈","☀️","❄️","⭐"]},
+          {label:"🦅 Animals", emojis:["🐶","🐱","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🦆","🦅","🦉","🐴","🦄","🦋","🐢","🐍","🐙","🐬","🐳","🦈","🐘","🦒","🦌","🐕","🐈","🦜","🕊"]},
+          {label:"🍕 Food", emojis:["🍕","🍔","🌮","🥗","🍝","🧁","🎂","🍰","🍦","🍩","🍪","🍫","🍬","🍭","☕","🍵","🧃","🥤","🥞","🍞","🥐","🥨","🧀","🍟","🌽","🥕","🍇","🍎","🍓","🫐","🥝","🍅"]},
+          {label:"⚽ Activities", emojis:["⚽","🏀","🏈","⚾","🎾","🏐","🎱","🏓","🏸","⛳","🎣","🤿","🎿","🛷","🎯","🎮","🎲","🏋","🤸","🏄","🚣","🏊","🚵","🚴","🛹","🛝","🎡","🎢","🎠","🎨","🎵","🎹","🎭","🏆","🥇"]},
+          {label:"🏫 Places", emojis:["🏠","🏡","🏪","🏫","🏬","🏯","🏰","⛪","⛲","⛺","🏕","🏖","🗺","🧭","🏔","🌋","🏜","🏝","🏞","🌃","🏙","🌄","🌅","🌆","🌇"]},
+          {label:"✨ Misc", emojis:["⭐","🌟","✨","💫","🔥","❄️","🌈","🎯","🎁","🎉","🎈","💡","🔑","📍","📌","🚩","🎓","📚","📖","💎","🛒","🎒","🧸","🪆","🔮","🌺","💐"]}
+        ].map(group=>`
+          <div style="margin-bottom:8px">
+            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--navy-l);margin-bottom:4px">${group.label}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:3px">
+              ${group.emojis.map(e=>`<button type="button" onclick="pickEmoji('${e}')" style="width:34px;height:34px;font-size:20px;border:1.5px solid ${p&&p.emoji===e?'var(--orange)':'var(--border)'};border-radius:6px;background:${p&&p.emoji===e?'var(--orange-p)':'white'};cursor:pointer;transition:all 0.1s;display:flex;align-items:center;justify-content:center" id="epick-${e}">${e}</button>`).join("")}
+            </div>
+          </div>`).join("")}
       </div>
       <div class="fg"><label>Description *</label><textarea id="af-desc" style="height:90px" placeholder="What's it like? Tips for first-timers?">${p?p.desc:""}</textarea></div>
       <div class="ap-section-label">Category tags (select all that apply)</div>
@@ -1631,21 +1724,34 @@ function apAddSponsor(){
 }
 
 function renderApSuggestions(body){
+  const corrections = SUGGESTIONS.filter(s=>s.type==="correction");
+  const newListings = SUGGESTIONS.filter(s=>s.type!=="correction");
   body.innerHTML=`
-    <div style="font-size:13px;color:var(--navy-m);margin-bottom:14px">${SUGGESTIONS.length} pending suggestion${SUGGESTIONS.length!==1?"s":""}</div>
-    ${SUGGESTIONS.length?SUGGESTIONS.map(s=>`
-      <div class="sug-row">
+    <div style="font-size:13px;color:var(--navy-m);margin-bottom:14px">
+      ${SUGGESTIONS.length} pending · ${corrections.length} correction${corrections.length!==1?"s":""} · ${newListings.length} new suggestion${newListings.length!==1?"s":""}
+    </div>
+    ${SUGGESTIONS.length?SUGGESTIONS.map(s=>{
+      const isCorrection = s.type==="correction";
+      const linkedPlace = s.linkedId ? PLACES.find(p=>p.id===s.linkedId) : null;
+      return `
+      <div class="sug-row" style="${isCorrection?"border-left:3px solid var(--orange);padding-left:11px":""}">
         <div class="sug-row-top">
-          <div class="sug-row-name">${s.name}</div>
-          <span style="font-size:11px;color:var(--navy-l)">${s.cat} · ${s.age}</span>
+          <div class="sug-row-name">
+            ${isCorrection?`<span style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--orange);margin-right:6px">✏️ Correction</span>`:`<span style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--teal);margin-right:6px">🌲 New place</span>`}
+            ${s.name}
+          </div>
+          <span style="font-size:11px;color:var(--navy-l)">${isCorrection?(linkedPlace?`Re: ${linkedPlace.name}`:"Linked listing"):`${s.cat||""} · ${s.age||""}`}</span>
         </div>
         <div class="sug-row-body">${s.why||"No description provided."}</div>
-        ${s.email?`<div style="font-size:11px;color:var(--navy-l);margin-top:4px">From: ${s.email}</div>`:""}
+        ${s.submitter?`<div style="font-size:11px;color:var(--navy-l);margin-top:4px">From: ${s.submitter}${s.email?" · "+s.email:""}</div>`:""}
         <div class="sug-row-actions">
-          <button class="ap-btn primary" onclick="apApproveSuggestion(${s.id})">✓ Add to map</button>
+          ${isCorrection
+            ?`<button class="ap-btn primary" onclick="apEditPlace('${s.linkedId||""}')">Edit listing →</button>`
+            :`<button class="ap-btn primary" onclick="apApproveSuggestion(${s.id})">✓ Add to map</button>`}
           <button class="ap-btn danger" onclick="apDismissSuggestion(${s.id})">Dismiss</button>
         </div>
-      </div>`).join(""):`<div class="noresults"><div class="noresults-em">✅</div><h4>All caught up!</h4><p>No pending suggestions.</p></div>`}`;
+      </div>`;
+    }).join(""):`<div class="noresults"><div class="noresults-em">✅</div><h4>All caught up!</h4><p>No pending suggestions or corrections.</p></div>`}`;
 }
 function apApproveSuggestion(id){
   const s=SUGGESTIONS.find(x=>x.id===id);
@@ -1812,15 +1918,29 @@ function apDeletePost(id){
   renderApPosts(document.getElementById("ap-body"));
 }
 
+// ─── EMOJI PICKER ────────────────────────────────────────────────────────────
+function pickEmoji(e){
+  document.getElementById("af-emoji").value = e;
+  document.getElementById("af-emoji-display").textContent = e;
+  document.getElementById("emoji-picker").classList.remove("open");
+  // Highlight selected
+  document.querySelectorAll("[id^='epick-']").forEach(b=>{
+    b.style.borderColor = "var(--border)";
+    b.style.background = "white";
+  });
+  const btn = document.getElementById("epick-"+e);
+  if(btn){ btn.style.borderColor="var(--orange)"; btn.style.background="var(--orange-p)"; }
+}
+
 // ─── MAP INIT ─────────────────────────────────────────────────────────────────
 // setAppTop must be global so toggleHero and toggleZip can call it
 function setAppTop(){
   const hero = document.getElementById("hero-banner");
-  const filterbar = document.getElementById("filterbar");
+  const filterwrap = document.getElementById("filterbar-wrap");
   const app = document.getElementById("app");
   if(!app) return;
   const heroH = hero ? hero.getBoundingClientRect().height : 0;
-  const filterH = filterbar ? filterbar.getBoundingClientRect().height : 52;
+  const filterH = filterwrap ? filterwrap.getBoundingClientRect().height : 52;
   const zipH = zipBarOpen ? 36 : 0;
   const top = 60 + heroH + filterH + zipH;
   app.style.top = top + "px";
@@ -1836,6 +1956,8 @@ window.addEventListener("load",()=>{
     attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
     subdomains:"abcd",maxZoom:19
   }).addTo(map);
+  // Re-sort sidebar when map is panned or zoomed
+  map.on("moveend", ()=>{ if(document.getElementById("sb-sort").value==="nearest") renderSidebar(); });
   // Load listings for all visitors using the read token
   fetchFromAirtable();
 });
