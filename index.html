@@ -646,14 +646,37 @@ body::before{
 .noresults p{font-size:13px;color:var(--navy-m)}
 
 /* ─── EMOJI PICKER ───────────────────────────────────────────────── */
-#emoji-picker{display:none;background:white;border:1.5px solid var(--border-m);border-radius:var(--rl);padding:12px;max-height:260px;overflow-y:auto;margin-bottom:12px}
-#emoji-picker.open{display:block}
+#emoji-picker{display:none;background:white;border:1.5px solid var(--border-m);border-radius:var(--rl);padding:12px;max-height:260px;overflow-y:auto;margin-bottom:12px;margin-top:6px}
+#emoji-picker.open{display:block !important}
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
 @media(max-width:680px){
   #sidebar{display:none}
-  #nav .btn-outline{display:none}
   #suggestbtn{bottom:55px;right:14px}
+
+  /* Nav - hide search and extra buttons, keep logo and key actions */
+  .nav-search{display:none}
+  .nav-right .btn-outline{display:none}
+  .btn-orange.btn-sm{font-size:11px;padding:6px 10px}
+
+  /* Hero - more compact on mobile */
+  .hero-left{padding:16px 16px 12px}
+  .hero-title{font-size:28px}
+  .hero-tagline{font-size:13px;margin-bottom:10px}
+  .hero-actions .btn-ghost-pine{display:none}
+  .hero-adstrip{padding:8px 14px;font-size:11px}
+  .adstrip-link{display:none}
+
+  /* Filter bar - smaller pills on mobile */
+  .pill{font-size:12px;padding:5px 11px}
+  .fb-arrow{width:26px}
+
+  /* Map takes full width and explicit height on mobile */
+  #mapwrap{width:100%;flex:1}
+  #map{width:100%;height:100%;min-height:300px}
+
+  /* Footer strip - compact */
+  #footstrip{font-size:12px;padding:7px 12px}
 }
 </style>
 </head>
@@ -1551,7 +1574,7 @@ function renderApForm(body){
         <div class="fg"><label>Name *</label><input id="af-name" type="text" value="${p?p.name:""}" placeholder="Place name"></div>
       </div>
       <!-- Emoji picker grid -->
-      <div id="emoji-picker" style="display:none;margin-bottom:12px">
+      <div id="emoji-picker">
         ${[
           {label:"⭐ Suggested", emojis:["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","☕","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔","🥾","🏊","🐾","🦆","🌲","🎭"]},
           {label:"🌿 Nature", emojis:["🌲","🌳","🌴","🌵","🌾","🌿","🍀","🍁","🍂","🌱","🌸","🌺","🌻","🌼","🌷","🍄","🌊","🏔","⛰","🏕","🏖","🌅","🌄","🌈","☀️","❄️","⭐"]},
@@ -1916,9 +1939,11 @@ function apDeletePost(id){
 // ─── EMOJI PICKER ────────────────────────────────────────────────────────────
 function pickEmoji(e){
   document.getElementById("af-emoji").value = e;
-  document.getElementById("af-emoji-display").textContent = e;
-  document.getElementById("emoji-picker").classList.remove("open");
-  // Highlight selected
+  const display = document.getElementById("af-emoji-display");
+  if(display) display.textContent = e;
+  const picker = document.getElementById("emoji-picker");
+  if(picker) picker.classList.remove("open");
+  // Highlight selected button
   document.querySelectorAll("[id^='epick-']").forEach(b=>{
     b.style.borderColor = "var(--border)";
     b.style.background = "white";
@@ -1951,14 +1976,13 @@ window.addEventListener("load",()=>{
 // ─── MAP INIT ─────────────────────────────────────────────────────────────────
 // setAppTop must be global so toggleHero and toggleZip can call it
 function setAppTop(){
-  const hero = document.getElementById("hero-banner");
   const filterwrap = document.getElementById("filterbar-wrap");
   const app = document.getElementById("app");
-  if(!app) return;
-  const heroH = hero ? hero.getBoundingClientRect().height : 0;
-  const filterH = filterwrap ? filterwrap.getBoundingClientRect().height : 52;
-  const zipH = zipBarOpen ? 36 : 0;
-  const top = 60 + heroH + filterH + zipH;
+  if(!app || !filterwrap) return;
+  // Use the bottom edge of the filterbar-wrap directly — most reliable on mobile
+  const bottom = filterwrap.getBoundingClientRect().bottom + window.scrollY;
+  const zipH = zipBarOpen ? (document.getElementById("zipbar")||{offsetHeight:36}).offsetHeight : 0;
+  const top = bottom + zipH;
   app.style.top = top + "px";
   if(map) map.invalidateSize();
 }
@@ -1969,7 +1993,9 @@ window.addEventListener("load",()=>{
   setTimeout(setAppTop, 100);
   setTimeout(setAppTop, 500);
   setTimeout(()=>{ setAppTop(); if(map) map.invalidateSize(); }, 1000);
-  window.addEventListener("resize", ()=>{ setAppTop(); updateFilterArrows(); });
+  // iOS Safari address bar shows/hides on scroll — recalculate
+  window.addEventListener("resize", ()=>{ setAppTop(); updateFilterArrows(); if(map) map.invalidateSize(); });
+  window.addEventListener("orientationchange", ()=>{ setTimeout(()=>{ setAppTop(); if(map) map.invalidateSize(); }, 300); });
 
   map=L.map("map",{center:[45.485,-122.800],zoom:12,zoomControl:true});
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
