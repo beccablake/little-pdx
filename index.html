@@ -66,6 +66,7 @@ body::before{
 .nav-search:focus-within{border-color:var(--orange)}
 .nav-search input{border:none;background:transparent;outline:none;font-size:13px;color:var(--navy);width:100%}
 .nav-search input::placeholder{color:var(--navy-l)}
+#nav-about-btn{display:none}
 .nav-right{margin-left:auto;display:flex;gap:8px;align-items:center}
 .btn{
   display:inline-flex;align-items:center;gap:6px;padding:7px 16px;
@@ -658,7 +659,6 @@ body::before{
   .nav-right .btn-outline{display:none}
   .btn-orange.btn-sm{font-size:11px;padding:6px 10px}
   #nav-about-btn{display:flex !important}
-
   /* Hero - hidden on mobile, shown as modal instead */
   #hero-banner{display:none !important}
 
@@ -673,7 +673,8 @@ body::before{
   #app{transition:top 0.15s ease}
 
   /* Map takes full width and fills container on mobile */
-  #mapwrap{width:100%;flex:1;height:100%}
+  #app{bottom:0 !important}
+  #mapwrap{width:100%;flex:1;min-height:0;height:100%}
   #map{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
 
   /* Footer strip - compact */
@@ -697,7 +698,7 @@ body::before{
     <input id="search" type="text" placeholder="Parks, food, classes…" autocomplete="off">
   </div>
   <div class="nav-right">
-    <button id="nav-about-btn" onclick="openMobileHero()" style="display:none" class="btn btn-outline btn-sm">🌲 About</button>
+    <button id="nav-about-btn" onclick="openMobileHero()" class="btn btn-outline btn-sm">🌲 About</button>
     <button class="btn btn-outline btn-sm" onclick="toggleRec()">📌 Recommended</button>
     <button class="btn btn-outline btn-sm" onclick="toggleZip()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -735,7 +736,7 @@ body::before{
 </div>
 
 <!-- MOBILE HERO OVERLAY -->
-<div id="mobile-hero-overlay" style="display:none;position:fixed;inset:0;z-index:1800;background:rgba(27,58,45,0.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeMobileHero()">
+<div id="mobile-hero-overlay" style="position:fixed;inset:0;z-index:1800;background:rgba(27,58,45,0.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;display:none" onclick="if(event.target===this)closeMobileHero()">
   <div style="background:var(--sand);width:100%;border-radius:24px 24px 0 0;padding:20px 24px 40px;box-shadow:0 -8px 40px rgba(0,0,0,0.15);max-height:85vh;overflow-y:auto;transition:transform 0.2s ease">
     <div style="width:36px;height:4px;background:var(--sand-dd);border-radius:99px;margin:0 auto 16px"></div>
     <div class="hero-eyebrow">🌲 Beaverton & Portland Metro</div>
@@ -1599,12 +1600,12 @@ function renderApForm(body){
       </div>
       <div id="emoji-picker">
         ${[
-          {label:"⭐ Suggested", emojis:["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","☕","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔","🥾","🏊","🐾","🦆","🌲","🎭","🧗","🏋","🤼","⛷","🏂","🪂","🤿","🏇","🎯","🥊","🏆"]},
+          {label:"⭐ Suggested", emojis:["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","🏩","☕","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔","🥾","🏊","🐾","🦆","🌲","🎭","🧗","🏋","🤼","⛷","🏂","🪂","🤿","🏇","🎯","🥊","🏆"]},
           {label:"🌿 Nature", emojis:["🌲","🌳","🌴","🌵","🌾","🌿","🍀","🍁","🍂","🌱","🌸","🌺","🌻","🌼","🌷","🍄","🌊","🏔","⛰","🏕","🏖","🌅","🌄","🌈","☀️","❄️","⭐"]},
           {label:"🦅 Animals", emojis:["🐶","🐱","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🦆","🦅","🦉","🐴","🦄","🦋","🐢","🐍","🐙","🐬","🐳","🦈","🐘","🦒","🦌","🐕","🐈","🦜","🕊"]},
           {label:"🍕 Food", emojis:["🍕","🍔","🌮","🥗","🍝","🧁","🎂","🍰","🍦","🍩","🍪","🍫","🍬","🍭","☕","🍵","🧃","🥤","🥞","🍞","🥐","🥨","🧀","🍟","🌽","🥕","🍇","🍎","🍓","🫐","🥝","🍅"]},
           {label:"⚽ Activities", emojis:["⚽","🏀","🏈","⚾","🎾","🏐","🎱","🏓","🏸","⛳","🎣","🤿","🎿","🛷","🎯","🎮","🎲","🏋","🤸","🏄","🚣","🏊","🚵","🚴","🛹","🛝","🎡","🎢","🎠","🎨","🎵","🎹","🎭","🏆","🥇","🧗","⛷","🏂","🪂","🤼","🥊","🏇","🤺","🥋","🏒","🎿","🛼","🧘","🤾","🏌"]},
-          {label:"🏫 Places", emojis:["🏠","🏡","🏪","🏫","🏬","🏯","🏰","⛪","⛲","⛺","🏕","🏖","🗺","🧭","🏔","🌋","🏜","🏝","🏞","🌃","🏙","🌄","🌅","🌆","🌇"]},
+          {label:"🏫 Places", emojis:["🏠","🏡","🏪","🏫","🏬","🏯","🏰","🏩","💒","🏛","🏟","🏗","⛪","⛲","⛺","🏕","🏖","🗺","🧭","🏔","🌋","🏜","🏝","🏞","🌃","🏙","🌄","🌅","🌆","🌇","🌉","🌁"]},
           {label:"✨ Misc", emojis:["⭐","🌟","✨","💫","🔥","❄️","🌈","🎯","🎁","🎉","🎈","💡","🔑","📍","📌","🚩","🎓","📚","📖","💎","🛒","🎒","🧸","🪆","🔮","🌺","💐"]}
         ].map(group=>`
           <div style="margin-bottom:8px">
@@ -1984,10 +1985,10 @@ function apDeletePost(id){
 
 // ─── MOBILE HERO ──────────────────────────────────────────────────────────────
 function openMobileHero(){
-  document.getElementById("mobile-hero-overlay").classList.add("open");
+  document.getElementById("mobile-hero-overlay").style.display="flex";
 }
 function closeMobileHero(){
-  document.getElementById("mobile-hero-overlay").classList.remove("open");
+  document.getElementById("mobile-hero-overlay").style.display="none";
 }
 // Drag to dismiss on the handle
 window.addEventListener("load", ()=>{
