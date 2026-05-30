@@ -83,7 +83,20 @@ body::before{
 #hero-banner{
   margin-top:60px;background:var(--mist);
   border-bottom:1px solid var(--border);
+  transition:all 0.3s ease;
 }
+#hero-banner.collapsed .hero-inner{max-height:0;overflow:hidden;padding:0}
+#hero-banner.collapsed .hero-adstrip{display:none}
+#hero-collapse-btn{
+  position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);
+  width:26px;height:26px;border-radius:50%;
+  background:var(--sand);border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:11px;color:var(--navy-m);
+  box-shadow:var(--shadow-sm);transition:all 0.2s;z-index:10;
+}
+#hero-collapse-btn:hover{background:var(--sand-d);color:var(--navy)}
+#hero-banner{position:relative}
 .hero-inner{
   display:flex;align-items:center;gap:0;
   max-height:220px;overflow:hidden;
@@ -554,7 +567,33 @@ body::before{
 .pm-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--navy-m);transition:all 0.15s}
 .pm-close:hover{background:var(--sand-d)}
 
-.noresults{padding:40px 20px;text-align:center}
+/* ─── ADMIN PASSWORD GATE ────────────────────────────────────────── */
+#admin-gate{
+  position:fixed;inset:0;z-index:4000;
+  background:rgba(27,58,45,0.7);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;transition:all 0.2s;
+}
+#admin-gate.on{opacity:1;visibility:visible}
+.gate-box{
+  background:var(--sand);border-radius:var(--rxl);
+  padding:32px;width:100%;max-width:340px;
+  box-shadow:var(--shadow-lg);text-align:center;
+}
+.gate-box h3{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--navy);margin-bottom:6px}
+.gate-box p{font-size:13px;color:var(--navy-m);margin-bottom:20px}
+.gate-box input{
+  width:100%;padding:10px 14px;border:1.5px solid var(--border-m);
+  border-radius:var(--r);font-size:15px;text-align:center;
+  letter-spacing:0.1em;outline:none;background:white;
+  font-family:'Nunito',sans-serif;color:var(--navy);
+  transition:border-color 0.15s;margin-bottom:12px;
+}
+.gate-box input:focus{border-color:var(--pine)}
+.gate-error{font-size:12px;color:#C0392B;margin-bottom:10px;display:none}
+.gate-error.on{display:block}
+
+/* ─── NO RESULTS ─────────────────────────────────────────────────── */
 .noresults-em{font-size:42px;margin-bottom:12px}
 .noresults h4{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:5px}
 .noresults p{font-size:13px;color:var(--navy-m)}
@@ -612,6 +651,8 @@ body::before{
     </div>
     <button class="adstrip-link" onclick="openModal('advertise-modal')">List your business →</button>
   </div>
+  <!-- Collapse toggle -->
+  <button id="hero-collapse-btn" onclick="toggleHero()" title="Minimize header">▲</button>
 </div>
 
 <!-- FILTER BAR -->
@@ -755,6 +796,19 @@ body::before{
       <button class="btn btn-outline" onclick="closeModal('sponsor-modal')">Close</button>
       <button class="btn btn-pine" onclick="closeModal('sponsor-modal');openModal('advertise-modal')">Open inquiry form →</button>
     </div>
+  </div>
+</div>
+
+<!-- ADMIN PASSWORD GATE -->
+<div id="admin-gate">
+  <div class="gate-box">
+    <div style="font-size:32px;margin-bottom:10px">🌲</div>
+    <h3>Admin Access</h3>
+    <p>Enter your password to manage Little PDX</p>
+    <input type="password" id="gate-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkGate()">
+    <div class="gate-error" id="gate-error">Incorrect password — try again</div>
+    <button class="btn-pine" style="width:100%;justify-content:center;padding:10px" onclick="checkGate()">Unlock →</button>
+    <button onclick="document.getElementById('admin-gate').classList.remove('on')" style="margin-top:10px;background:none;border:none;font-size:12px;color:var(--navy-l);cursor:pointer;font-family:'Nunito',sans-serif">Cancel</button>
   </div>
 </div>
 
@@ -950,7 +1004,7 @@ function renderSidebar(){
   if(!vis.length){el.innerHTML=`<div class="noresults"><div class="noresults-em">🔍</div><h4>No places found</h4><p>Try a different filter or search.</p></div>`;return;}
   el.innerHTML=vis.map(p=>`
     <div class="pcard${p.id===selectedId?" sel":""}${p.featured?" feat":""}" onclick="selectPlace(${p.id})">
-      <div class="pthumb">${p.emoji}</div>
+      <div class="pthumb">${p.photoUrls&&p.photoUrls[0]?`<img src="${p.photoUrls[0]}" alt="${p.name}" loading="lazy">`:`<span style="font-size:28px">${p.emoji}</span>`}</div>
       <div class="pinfo">
         <div class="ptop">
           <div class="pname">${p.name}</div>
@@ -987,7 +1041,7 @@ function renderMapPins(){
 }
 function popupHtml(p){
   return `<div>
-    <div class="popup-img">${p.emoji}</div>
+    <div class="popup-img">${p.photoUrls&&p.photoUrls[0]?`<img src="${p.photoUrls[0]}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:38px">${p.emoji}</span>`}</div>
     <div class="popup-body">
       <div class="popup-name">${p.name}${p.featured?` <span class="feat-badge">✦</span>`:""}</div>
       <div class="popup-meta"><span style="color:var(--orange)">${starsHtml(p.rating)}</span> ${p.rating.toFixed(1)} · ${p.reviews} reviews</div>
@@ -1002,7 +1056,7 @@ function renderGrid(){
   const vis=sorted(PLACES.filter(matches));
   document.getElementById("gridview").innerHTML=vis.map(p=>`
     <div class="gcard${p.featured?" feat":""}" onclick="selectPlace(${p.id})">
-      <div class="gcard-img">${p.emoji}</div>
+      <div class="gcard-img">${p.photoUrls&&p.photoUrls[0]?`<img src="${p.photoUrls[0]}" alt="${p.name}" loading="lazy">`:`<span style="font-size:46px">${p.emoji}</span>`}</div>
       <div class="gcard-body">
         <div class="gcard-top">
           <div class="gcard-name">${p.name}</div>
@@ -1034,7 +1088,10 @@ function selectPlace(id){
 function openDrawer(p){
   const dc=document.getElementById("dcontent");
   dc.innerHTML=`
-    <div class="dgallery">${p.photos.map((ph,i)=>`<div class="dimg${i===0?" big":""}">${ph}</div>`).join("")}</div>
+    <div class="dgallery">${(p.photoUrls&&p.photoUrls.length?p.photoUrls:p.photos).map((ph,i)=>{
+      const isUrl = typeof ph==="string"&&ph.startsWith("http");
+      return `<div class="dimg${i===0?" big":""}">${isUrl?`<img src="${ph}" alt="${p.name}" loading="lazy">`:`<span>${ph}</span>`}</div>`;
+    }).join("")}</div>
     <div class="dtitle">${p.name}</div>
     <div class="dmeta">
       <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--navy-m)">
@@ -1185,7 +1242,46 @@ function submitAdvertise(){
 function submitSponsor(){openModal("advertise-modal");}
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
-function openAdmin(){document.getElementById("admin-overlay").classList.add("on");apTab("places",document.querySelector(".ap-tab"));}
+// ─── ADMIN PASSWORD ───────────────────────────────────────────────────────────
+// Change this to your own password!
+const ADMIN_PASSWORD = "littlepdx2026";
+let adminUnlocked = false;
+function openAdmin(){
+  if(adminUnlocked){
+    document.getElementById("admin-overlay").classList.add("on");
+    apTab("places",document.querySelector(".ap-tab"));
+  } else {
+    document.getElementById("admin-gate").classList.add("on");
+    setTimeout(()=>document.getElementById("gate-pw").focus(),100);
+  }
+}
+function checkGate(){
+  const pw = document.getElementById("gate-pw").value;
+  if(pw === ADMIN_PASSWORD){
+    adminUnlocked = true;
+    document.getElementById("admin-gate").classList.remove("on");
+    document.getElementById("gate-pw").value = "";
+    document.getElementById("gate-error").classList.remove("on");
+    document.getElementById("admin-overlay").classList.add("on");
+    apTab("places",document.querySelector(".ap-tab"));
+  } else {
+    document.getElementById("gate-error").classList.add("on");
+    document.getElementById("gate-pw").value = "";
+    document.getElementById("gate-pw").focus();
+  }
+}
+
+// ─── HERO COLLAPSE ────────────────────────────────────────────────────────────
+let heroCollapsed = false;
+function toggleHero(){
+  heroCollapsed = !heroCollapsed;
+  const banner = document.getElementById("hero-banner");
+  const btn = document.getElementById("hero-collapse-btn");
+  banner.classList.toggle("collapsed", heroCollapsed);
+  btn.textContent = heroCollapsed ? "▼" : "▲";
+  btn.title = heroCollapsed ? "Expand header" : "Minimize header";
+  setTimeout(setAppTop, 320);
+}
 function closeAdmin(){document.getElementById("admin-overlay").classList.remove("on");}
 document.getElementById("admin-overlay").addEventListener("click",e=>{if(e.target===document.getElementById("admin-overlay")) closeAdmin();});
 function apTab(tab,btn){
@@ -1266,6 +1362,11 @@ function renderApForm(body){
         <input type="checkbox" id="af-featured" ${p&&p.featured?"checked":""} style="width:16px;height:16px;accent-color:var(--orange)">
         <label for="af-featured" style="font-size:13px;font-weight:700;color:var(--navy);cursor:pointer">Mark as Featured (paid partner)</label>
       </div>
+      <div class="ap-section-label">Photos</div>
+      <div style="font-size:11px;color:var(--navy-l);margin-bottom:8px">Paste image URLs (e.g. from Google Photos, Imgur, or your GitHub repo). Leave blank to use the emoji.</div>
+      <div class="fg"><label>Photo 1 URL (main)</label><input id="af-photo1" type="text" value="${p&&p.photoUrls&&p.photoUrls[0]?p.photoUrls[0]:""}" placeholder="https://…/photo.jpg"></div>
+      <div class="fg"><label>Photo 2 URL</label><input id="af-photo2" type="text" value="${p&&p.photoUrls&&p.photoUrls[1]?p.photoUrls[1]:""}" placeholder="https://…/photo.jpg"></div>
+      <div class="fg"><label>Photo 3 URL</label><input id="af-photo3" type="text" value="${p&&p.photoUrls&&p.photoUrls[2]?p.photoUrls[2]:""}" placeholder="https://…/photo.jpg"></div>
       <div style="display:flex;gap:10px">
         <button class="ap-btn" onclick="renderApPlaces(document.getElementById('ap-body'));document.querySelectorAll('.ap-tab')[0].classList.add('on');document.querySelectorAll('.ap-tab')[1].classList.remove('on')">Cancel</button>
         <button class="ap-btn primary" onclick="apSavePlace()">✓ ${p?"Save changes":"Add place"}</button>
@@ -1293,6 +1394,11 @@ function apSavePlace(){
     rating:parseFloat(document.getElementById("af-rating").value)||4.5,
     reviews:parseInt(document.getElementById("af-reviews").value)||0,
     featured:document.getElementById("af-featured").checked,
+    photoUrls:[
+      document.getElementById("af-photo1").value.trim(),
+      document.getElementById("af-photo2").value.trim(),
+      document.getElementById("af-photo3").value.trim()
+    ].filter(Boolean),
     photos:[document.getElementById("af-emoji").value||"🌟","📍","⭐"]
   };
   if(editingId){
