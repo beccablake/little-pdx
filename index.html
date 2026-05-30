@@ -657,8 +657,7 @@ body::before{
   /* Nav - hide search, keep logo and key actions */
   .nav-search{display:none}
   .nav-right .btn-outline{display:none}
-  .btn-orange.btn-sm{font-size:11px;padding:6px 10px}
-  #nav-about-btn{display:flex !important}
+  #nav-about-btn{display:flex !important;font-size:12px;padding:6px 12px}
   /* Hero - hidden on mobile, shown as modal instead */
   #hero-banner{display:none !important}
 
@@ -2027,14 +2026,19 @@ function updateFilterArrows(){
   if(!fb) return;
   const left = document.getElementById("fb-left");
   const right = document.getElementById("fb-right");
-  if(left) left.classList.toggle("visible", fb.scrollLeft > 10);
-  if(right) right.classList.toggle("visible", fb.scrollLeft < fb.scrollWidth - fb.clientWidth - 10);
+  const canScrollLeft = fb.scrollLeft > 2;
+  const canScrollRight = fb.scrollLeft < fb.scrollWidth - fb.clientWidth - 2;
+  if(left) left.classList.toggle("visible", canScrollLeft);
+  if(right) right.classList.toggle("visible", canScrollRight);
 }
 window.addEventListener("load",()=>{
   const fb = document.getElementById("filterbar");
   if(fb){
     fb.addEventListener("scroll", updateFilterArrows);
-    setTimeout(updateFilterArrows, 300);
+    // Run multiple times — browser needs time to compute overflow after fonts load
+    updateFilterArrows();
+    setTimeout(updateFilterArrows, 200);
+    setTimeout(updateFilterArrows, 800);
   }
 });
 
