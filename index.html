@@ -817,7 +817,7 @@ body::before{
     <div style="font-size:32px;margin-bottom:10px">🌲</div>
     <h3>Admin Access</h3>
     <p>Enter your password and Airtable token to manage Little PDX</p>
-    <input type="password" id="gate-pw" placeholder="Password" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('gate-token').focus()" style="margin-bottom:8px">
+    <input type="text" id="gate-pw" placeholder="Password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')document.getElementById('gate-token').focus()" style="margin-bottom:8px;-webkit-text-security:disc">
     <input type="text" id="gate-token" placeholder="Airtable token (patXXXXX…)" autocomplete="off" onkeydown="if(event.key==='Enter')checkGate()" style="margin-bottom:8px;letter-spacing:0">
     <div class="gate-error" id="gate-error">Incorrect password — try again</div>
     <button class="btn-pine" style="width:100%;justify-content:center;padding:10px" onclick="checkGate()">Unlock →</button>
