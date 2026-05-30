@@ -1379,22 +1379,28 @@ function renderApPlaces(body){
     </div>
     <div class="ap-list">
       ${PLACES.map(p=>`
-        <div class="ap-item">
+        <div class="ap-item" data-id="${p.id}">
           <div class="ap-item-emoji">${p.emoji}</div>
           <div class="ap-item-info">
             <div class="ap-item-name">${p.name}${p.featured?` <span class="feat-badge">✦ Featured</span>`:""}</div>
             <div class="ap-item-meta">
-              <span>${p.tags.map(t=>TAG_LABELS[t]).join(", ")}</span>
-              <span>·</span><span>★ ${(p.rating||0).toFixed(1)}</span>
+              <span>${p.tags.map(t=>TAG_LABELS[t]||t).join(", ")}</span>
             </div>
           </div>
           <div class="ap-item-actions">
-            <button class="ap-btn" onclick="apEditPlace(${p.id})">Edit</button>
-            <button class="ap-btn" onclick="apToggleFeatured(${p.id})">${p.featured?"Unfeature":"Feature"}</button>
-            <button class="ap-btn danger" onclick="apDeletePlace(${p.id})">Delete</button>
+            <button class="ap-btn ap-edit-btn">Edit</button>
+            <button class="ap-btn ap-feat-btn">${p.featured?"Unfeature":"Feature"}</button>
+            <button class="ap-btn danger ap-del-btn">Delete</button>
           </div>
         </div>`).join("")}
     </div>`;
+  // Event delegation so Airtable record IDs don't break onclick
+  body.querySelectorAll(".ap-item").forEach(el => {
+    const id = el.dataset.id;
+    el.querySelector(".ap-edit-btn").onclick = () => apEditPlace(id);
+    el.querySelector(".ap-feat-btn").onclick = () => apToggleFeatured(id);
+    el.querySelector(".ap-del-btn").onclick = () => apDeletePlace(id);
+  });
 }
 
 function renderApForm(body){
