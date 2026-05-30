@@ -66,7 +66,7 @@ body::before{
 .nav-search:focus-within{border-color:var(--orange)}
 .nav-search input{border:none;background:transparent;outline:none;font-size:13px;color:var(--navy);width:100%}
 .nav-search input::placeholder{color:var(--navy-l)}
-#nav-about-btn{display:none}
+#nav-about-btn{display:none;border:1.5px solid var(--border-m);background:transparent;color:var(--navy)}
 .nav-right{margin-left:auto;display:flex;gap:8px;align-items:center}
 .btn{
   display:inline-flex;align-items:center;gap:6px;padding:7px 16px;
@@ -306,7 +306,7 @@ body::before{
 .tag-free      {background:#EDFFF5;         color:#0A6B3A;border-color:rgba(10,107,58,0.2)}
 
 /* ─── MAP ───────────────────────────────────────────────────────── */
-#mapwrap{flex:1;position:relative;overflow:hidden}
+#mapwrap{flex:1;position:relative;overflow:hidden;height:100%}
 #map{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
 .leaflet-container{font-family:'Nunito',sans-serif !important}
 .leaflet-popup-content-wrapper{border-radius:var(--rl) !important;box-shadow:var(--shadow-lg) !important;border:1px solid var(--border) !important;padding:0 !important;overflow:hidden}
@@ -657,7 +657,7 @@ body::before{
   /* Nav - hide search, keep logo and key actions */
   .nav-search{display:none}
   .nav-right .btn-outline{display:none}
-  #nav-about-btn{display:flex !important;font-size:12px;padding:6px 12px}
+  #nav-about-btn{display:flex;font-size:12px;padding:6px 12px}
   /* Hero - hidden on mobile, shown as modal instead */
   #hero-banner{display:none !important}
 
@@ -668,11 +668,10 @@ body::before{
   .pill{font-size:12px;padding:5px 11px}
   .fb-arrow{width:26px}
 
-  /* App fills from just below filterbar */
-  #app{transition:top 0.15s ease}
+  /* App fills from just below filterbar to bottom of screen */
+  #app{transition:top 0.15s ease;bottom:0 !important}
 
   /* Map takes full width and fills container on mobile */
-  #app{bottom:0 !important}
   #mapwrap{width:100%;flex:1;min-height:0;height:100%}
   #map{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
 
@@ -697,7 +696,7 @@ body::before{
     <input id="search" type="text" placeholder="Parks, food, classes…" autocomplete="off">
   </div>
   <div class="nav-right">
-    <button id="nav-about-btn" onclick="openMobileHero()" class="btn btn-outline btn-sm">🌲 About</button>
+    <button id="nav-about-btn" onclick="openMobileHero()" class="btn btn-sm">🌲 About</button>
     <button class="btn btn-outline btn-sm" onclick="toggleRec()">📌 Recommended</button>
     <button class="btn btn-outline btn-sm" onclick="toggleZip()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -968,20 +967,7 @@ body::before{
 <script>
 // ─── RECOMMENDED POSTS ────────────────────────────────────────────────────────
 // Add posts here or use Admin → Posts tab
-let POSTS = [
-  {id:1, title:"Best Splash Pads in Beaverton for Summer 2026", category:"Guide", emoji:"💦",
-   date:"May 2026", author:"Little PDX",
-   excerpt:"We rounded up every splash pad in the area, ranked by shade, parking, and toddler-friendliness.",
-   content:"Summer is here and we've visited every splash pad in the Beaverton and Hillsboro area so you don't have to guess. Here's our full ranking:\n\n🥇 Aloha Community Park — The best overall. Great equipment, decent shade trees, and a covered picnic area right next to the splash zone. Opens June 1st.\n\n🥈 Tualatin Community Park — Massive spray area, tons of jets and dumping buckets. Gets crowded on hot days but the park is big enough that it never feels overwhelming.\n\n🥉 Rood Bridge Park in Hillsboro — A hidden gem. Less crowded than the bigger parks, great grassy area around it for picnics.\n\nTips: Go early (before 11am) on hot days. Bring water shoes. Pack snacks."},
-  {id:2, title:"5 Rainy Day Activities That Aren't the Children's Museum", category:"Tips", emoji:"🌧️",
-   date:"April 2026", author:"Little PDX",
-   excerpt:"Great options when it's raining and you've already done the Children's Museum three times this month.",
-   content:"Portland rain doesn't have to mean a boring day. Here are five indoor spots we actually love:\n\n1. Treehouse Café & Play — Pay-to-play soft play with great coffee for parents. Perfect for under-5s.\n\n2. Little Explorers Gym — Open gym sessions on Tuesdays and Thursdays.\n\n3. Beaverton City Library — Free storytimes several mornings a week.\n\n4. Powell's Books (Cedar Hills) — The kids section is huge and they're totally fine with you sitting on the floor and reading for an hour.\n\n5. OMSI — Buy a membership if you go more than twice a year. Pays for itself fast."},
-  {id:3, title:"Where to Eat with a Toddler in Beaverton", category:"Food", emoji:"🍕",
-   date:"March 2026", author:"Little PDX",
-   excerpt:"Restaurants where the staff actually seem happy to see your kid walk in.",
-   content:"Eating out with a toddler is a sport. Here are the spots where we feel genuinely welcome:\n\nHot Lips Pizza — Loud enough that a meltdown blends in, booths are big, kids menu is solid.\n\nBeaverton Farmers Market — Not a restaurant but the easiest eating-out experience with little ones.\n\nGustav's German Pub — The outdoor biergarten is surprisingly great. Giant pretzels, plenty of space.\n\nTreehouse Café & Play — Built for exactly this. Kids play, you eat in peace."}
-];
+let POSTS = [];
 let nextPostId = 10;
 
 // ─── AIRTABLE CONFIG ──────────────────────────────────────────────────────────
@@ -1097,17 +1083,9 @@ function clearMapMessage(){
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 let PLACES = []; // Loaded from Airtable on login
 
-let SPONSORS = [
-  {id:1, name:"Little Explorers Gym", email:"info@littleexplorers.com", status:"active", msg:"Little Explorers Gym — New toddler tumbling classes starting June! First class free."},
-  {id:2, name:"Beaverton Farmers Market", email:"hello@bfm.com", status:"active", msg:"Beaverton Farmers Market — Every Saturday 8am–1:30pm through November. Free entry!"},
-  {id:3, name:"Treehouse Café & Play", email:"hi@treehousecafe.com", status:"active", msg:"Treehouse Café & Play — Indoor soft play + great coffee. Perfect rainy-day escape."}
-];
+let SPONSORS = [];
 
-let SUGGESTIONS = [
-  {id:1, name:"Orenco Woods Nature Park", cat:"Park", age:"All ages", why:"Gorgeous trail along Jackson Bottom. See great blue herons!", email:"sarah@gmail.com"},
-  {id:2, name:"Slappy Cakes", cat:"Restaurant", age:"All ages", why:"Kids cook their own pancakes on tabletop griddles. Insane and amazing.", email:""},
-  {id:3, name:"Romp n' Roll", cat:"Class / Activity", age:"Little kids (0–5)", why:"Amazing tumbling + arts classes for toddlers. My daughter loves it.", email:"jen@outlook.com"}
-];
+let SUGGESTIONS = [];
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let activeFilters = new Set(["all"]);
@@ -1599,8 +1577,8 @@ function renderApForm(body){
       </div>
       <div id="emoji-picker">
         ${[
-          {label:"⭐ Suggested", emojis:["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","🏩","☕","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔","🥾","🏊","🐾","🦆","🌲","🎭","🧗","🏋","🤼","⛷","🏂","🪂","🤿","🏇","🎯","🥊","🏆"]},
-          {label:"🌿 Nature", emojis:["🌲","🌳","🌴","🌵","🌾","🌿","🍀","🍁","🍂","🌱","🌸","🌺","🌻","🌼","🌷","🍄","🌊","🏔","⛰","🏕","🏖","🌅","🌄","🌈","☀️","❄️","⭐"]},
+          {label:"⭐ Suggested", emojis:["🌲","🌳","🛝","💦","🍕","🤸","🎨","🎵","🚲","⚽","🏃","🛹","🌿","🦅","🏠","🏩","☕","🏞","💧","🌊","🌽","🍓","🥨","🎪","🎡","🎢","🏫","👶","🧒","🌟","📍","🗺","✨","🏔","🥾","🏊","🐾","🦆","🌲","🎭","🧗","🏋","🤼","⛷","🏂","🪂","🤿","🏇","🎯","🥊","🏆"]},
+          {label:"🌿 Nature", emojis:["🌲","🌳","🌴","🌵","🌾","🌿","🍀","🍁","🍂","🌱","🌸","🌺","🌻","🌼","🌷","🍄","🌊","💧","🏞","🏔","⛰","🏕","🏖","🏝","🌅","🌄","🌈","☀️","🌤","⛅","🌧","❄️","⭐","🌙"]},
           {label:"🦅 Animals", emojis:["🐶","🐱","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🦆","🦅","🦉","🐴","🦄","🦋","🐢","🐍","🐙","🐬","🐳","🦈","🐘","🦒","🦌","🐕","🐈","🦜","🕊"]},
           {label:"🍕 Food", emojis:["🍕","🍔","🌮","🥗","🍝","🧁","🎂","🍰","🍦","🍩","🍪","🍫","🍬","🍭","☕","🍵","🧃","🥤","🥞","🍞","🥐","🥨","🧀","🍟","🌽","🥕","🍇","🍎","🍓","🫐","🥝","🍅"]},
           {label:"⚽ Activities", emojis:["⚽","🏀","🏈","⚾","🎾","🏐","🎱","🏓","🏸","⛳","🎣","🤿","🎿","🛷","🎯","🎮","🎲","🏋","🤸","🏄","🚣","🏊","🚵","🚴","🛹","🛝","🎡","🎢","🎠","🎨","🎵","🎹","🎭","🏆","🥇","🧗","⛷","🏂","🪂","🤼","🥊","🏇","🤺","🥋","🏒","🎿","🛼","🧘","🤾","🏌"]},
@@ -2048,12 +2026,11 @@ function setAppTop(){
   const filterwrap = document.getElementById("filterbar-wrap");
   const app = document.getElementById("app");
   if(!app || !filterwrap) return;
-  const rect = filterwrap.getBoundingClientRect();
-  // On mobile hero is hidden so filterwrap sits right below nav (top ~60px)
-  // getBoundingClientRect().bottom gives us the exact bottom edge in viewport coords
-  const bottom = rect.bottom + window.scrollY;
+  // getBoundingClientRect().bottom = distance from top of viewport to bottom of filterbar
+  // This is exactly where #app should start — no scrollY needed since filterbar is sticky
+  const top = filterwrap.getBoundingClientRect().bottom;
   const zipH = zipBarOpen ? (document.getElementById("zipbar")||{offsetHeight:36}).offsetHeight : 0;
-  app.style.top = (bottom + zipH) + "px";
+  app.style.top = Math.round(top + zipH) + "px";
   if(map) map.invalidateSize();
 }
 
