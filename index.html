@@ -432,13 +432,14 @@ body::before{
   position:fixed;inset:0;z-index:3000;
   background:rgba(26,43,60,0.65);backdrop-filter:blur(6px);
   opacity:0;visibility:hidden;transition:all 0.2s;
-  display:flex;align-items:flex-end;justify-content:center;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
 }
 #admin-overlay.on{opacity:1;visibility:visible}
 #admin-panel{
-  background:white;width:100%;max-width:680px;border-radius:24px 24px 0 0;
-  max-height:92vh;overflow-y:auto;box-shadow:0 -12px 60px rgba(0,0,0,0.2);
-  transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.34,1.2,0.64,1);
+  background:white;width:100%;max-width:680px;border-radius:var(--rxl);
+  max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);
+  transform:translateY(20px);transition:transform 0.25s cubic-bezier(0.34,1.2,0.64,1);
 }
 #admin-overlay.on #admin-panel{transform:translateY(0)}
 .ap-head{
@@ -1035,9 +1036,9 @@ function toggleFilter(f,btn){
 function sorted(list){
   const s=document.getElementById("sb-sort").value;
   const c=[...list];
-  if(s==="rating") return c.sort((a,b)=>(b.featured-a.featured)||(b.rating-a.rating));
+  if(s==="rating") return c.sort((a,b)=>(b.featured-a.featured)||((b.rating||0)-(a.rating||0)));
   if(s==="name") return c.sort((a,b)=>a.name.localeCompare(b.name));
-  if(s==="featured") return c.sort((a,b)=>b.featured-a.featured||b.rating-a.rating);
+  if(s==="featured") return c.sort((a,b)=>b.featured-a.featured||(b.rating||0)-(a.rating||0));
   return c;
 }
 
@@ -1066,7 +1067,7 @@ function renderSidebar(){
           <div class="pname">${p.name}</div>
           ${p.featured?`<span class="feat-badge">✦</span>`:""}
         </div>
-        <div class="prating"><span class="stars">${starsHtml(p.rating)}</span>${p.rating.toFixed(1)} <span style="color:var(--navy-l)">(${p.reviews})</span></div>
+        <div class="prating"><span class="stars">${p.rating?starsHtml(p.rating)+"</span>"+(p.rating||0).toFixed(1):'\</span>'}</div>
         <div class="ptags">${p.tags.map(tagHtml).join("")}</div>
       </div>
     </div>`).join("");
@@ -1100,7 +1101,7 @@ function popupHtml(p){
     <div class="popup-img">${p.photoUrls&&p.photoUrls[0]?`<img src="${p.photoUrls[0]}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:38px">${p.emoji}</span>`}</div>
     <div class="popup-body">
       <div class="popup-name">${p.name}${p.featured?` <span class="feat-badge">✦</span>`:""}</div>
-      <div class="popup-meta"><span style="color:var(--orange)">${starsHtml(p.rating)}</span> ${p.rating.toFixed(1)} · ${p.reviews} reviews</div>
+      <div class="popup-meta"><span style="color:var(--orange)">${p.rating?starsHtml(p.rating):""}</span> ${(p.rating||0).toFixed(1)} · ${p.reviews} reviews</div>
       <div class="popup-tags">${p.tags.map(tagHtml).join("")}</div>
       <button class="popup-btn" onclick="selectPlace(${p.id})">View details</button>
     </div>
@@ -1118,7 +1119,7 @@ function renderGrid(){
           <div class="gcard-name">${p.name}</div>
           ${p.featured?`<span class="feat-badge">✦</span>`:""}
         </div>
-        <div class="gcard-meta"><span style="color:var(--orange)">${starsHtml(p.rating)}</span> ${p.rating.toFixed(1)} · ${p.reviews} reviews</div>
+        <div class="gcard-meta"><span style="color:var(--orange)">${p.rating?starsHtml(p.rating):""}</span> ${(p.rating||0).toFixed(1)} · ${p.reviews} reviews</div>
         <div class="ptags" style="margin-bottom:8px">${p.tags.map(tagHtml).join("")}</div>
         <div class="gcard-desc">${p.desc.substring(0,100)}…</div>
       </div>
@@ -1151,8 +1152,8 @@ function openDrawer(p){
     <div class="dtitle">${p.name}</div>
     <div class="dmeta">
       <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--navy-m)">
-        <span style="color:var(--orange)">${starsHtml(p.rating)}</span>
-        <strong>${p.rating.toFixed(1)}</strong> <span style="color:var(--navy-l)">(${p.reviews} reviews)</span>
+        <span style="color:var(--orange)">${p.rating?starsHtml(p.rating):""}</span>
+        <strong>${(p.rating||0).toFixed(1)}</strong> <span style="color:var(--navy-l)">(${(p.reviews||0)} reviews)</span>
       </div>
       ${p.featured?`<span class="feat-badge">✦ Featured</span>`:""}
     </div>
@@ -1384,7 +1385,7 @@ function renderApPlaces(body){
             <div class="ap-item-name">${p.name}${p.featured?` <span class="feat-badge">✦ Featured</span>`:""}</div>
             <div class="ap-item-meta">
               <span>${p.tags.map(t=>TAG_LABELS[t]).join(", ")}</span>
-              <span>·</span><span>★ ${p.rating.toFixed(1)}</span>
+              <span>·</span><span>★ ${(p.rating||0).toFixed(1)}</span>
             </div>
           </div>
           <div class="ap-item-actions">
@@ -1614,7 +1615,7 @@ function apDismissSuggestion(id){
 
 function renderApStats(body){
   const feat=PLACES.filter(p=>p.featured).length;
-  const totalRev=PLACES.reduce((a,p)=>a+p.reviews,0);
+  const totalRev=PLACES.reduce((a,p)=>a+(p.reviews||0),0);
   body.innerHTML=`
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-num">${PLACES.length}</div><div class="stat-label">Places listed</div></div>
