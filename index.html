@@ -85,8 +85,17 @@ body::before{
   border-bottom:1px solid var(--border);
   transition:all 0.3s ease;
 }
-#hero-banner.collapsed .hero-inner{max-height:0;overflow:hidden;padding:0}
+.hero-inner{
+  transition:max-height 0.3s ease, padding 0.3s ease;
+  overflow:hidden;
+}
+#hero-banner.collapsed .hero-inner{
+  max-height:0 !important;
+  padding-top:0 !important;
+  padding-bottom:0 !important;
+}
 #hero-banner.collapsed .hero-adstrip{display:none}
+#hero-banner.collapsed{border-bottom:none}
 #hero-collapse-btn{
   position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);
   width:26px;height:26px;border-radius:50%;
@@ -1280,7 +1289,11 @@ function toggleHero(){
   banner.classList.toggle("collapsed", heroCollapsed);
   btn.textContent = heroCollapsed ? "▼" : "▲";
   btn.title = heroCollapsed ? "Expand header" : "Minimize header";
-  setTimeout(setAppTop, 320);
+  // Wait for CSS transition to finish then recalculate
+  setTimeout(()=>{
+    setAppTop();
+    if(map) map.invalidateSize();
+  }, 320);
 }
 function closeAdmin(){document.getElementById("admin-overlay").classList.remove("on");}
 document.getElementById("admin-overlay").addEventListener("click",e=>{if(e.target===document.getElementById("admin-overlay")) closeAdmin();});
@@ -1664,11 +1677,12 @@ window.addEventListener("load",()=>{
   const filterbar = document.getElementById("filterbar");
   const app = document.getElementById("app");
   function setAppTop(){
-    const heroH = hero ? hero.offsetHeight : 0;
-    const filterH = filterbar ? filterbar.offsetHeight : 52;
+    const heroH = hero ? hero.getBoundingClientRect().height : 0;
+    const filterH = filterbar ? filterbar.getBoundingClientRect().height : 52;
     const top = 60 + heroH + filterH;
     app.style.top = top + "px";
     document.documentElement.style.setProperty("--hero-h", heroH+"px");
+    if(map) map.invalidateSize();
   }
   setAppTop();
   window.addEventListener("resize", setAppTop);
