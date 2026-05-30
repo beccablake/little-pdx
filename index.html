@@ -1102,20 +1102,21 @@ function renderMapPins(){
     if(!markers[p.id]){
       const m=L.marker([p.lat,p.lng],{icon:makePinIcon(p),title:p.name});
       m.bindPopup(popupHtml(p),{maxWidth:230,minWidth:230});
-      m.on("click",()=>selectPlace(p.id));
+      m.on("click",()=>{window._popupId=p.id;selectPlace(p.id);});
       m.addTo(map);
       markers[p.id]=m;
     }
   });
 }
 function popupHtml(p){
+  // Store id in a global temp so the button can access it safely
+  window._popupId = p.id;
   return `<div>
     <div class="popup-img">${p.photoUrls&&p.photoUrls[0]?`<img src="${p.photoUrls[0]}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover">`:`<span style="font-size:38px">${p.emoji}</span>`}</div>
     <div class="popup-body">
-      <div class="popup-name">${p.name}${p.featured?` <span class="feat-badge">✦</span>`:""}</div>
-      <div class="popup-meta"><span style="color:var(--orange)">${p.rating?starsHtml(p.rating):""}</span> ${(p.rating||0).toFixed(1)} · ${p.reviews} reviews</div>
+      <div class="popup-name">${p.emoji} ${p.name}${p.featured?` <span class="feat-badge">✦</span>`:""}</div>
       <div class="popup-tags">${p.tags.map(tagHtml).join("")}</div>
-      <button class="popup-btn" onclick="selectPlace(${p.id})">View details</button>
+      <button class="popup-btn" onclick="selectPlace(window._popupId)">View details</button>
     </div>
   </div>`;
 }
@@ -1165,7 +1166,7 @@ function openDrawer(p){
 
   dc.innerHTML=`
     ${galleryHtml}
-    <div class="dtitle">${p.name}</div>
+    <div class="dtitle">${p.emoji} ${p.name}</div>
     <div class="dmeta">
       ${p.featured?`<span class="feat-badge">✦ Featured</span>`:""}
     </div>
