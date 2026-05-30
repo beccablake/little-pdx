@@ -1398,24 +1398,6 @@ function submitSuggest(){
   document.getElementById("sg-listing-id").value="";
   alert(listingId?"Thanks for the note! We'll review it and update the listing. ✏️":"Thanks for the suggestion! We review everything and will reach out if we add it. 🌲");
 }
-  const name=document.getElementById("sg-name").value.trim();
-  const why=document.getElementById("sg-why").value.trim();
-  if(!name){alert("Please enter a place name.");return;}
-  if(!why){alert("Please tell us why you love it!");return;}
-  SUGGESTIONS.unshift({
-    id:Date.now(),name,
-    cat:document.getElementById("sg-cat").value,
-    age:document.getElementById("sg-age").value,
-    addr:document.getElementById("sg-addr")?document.getElementById("sg-addr").value:"",
-    why,
-    submitter:document.getElementById("sg-yourname")?document.getElementById("sg-yourname").value:"",
-    email:document.getElementById("sg-email").value,
-    status:"pending"
-  });
-  closeModal("suggest-modal");
-  ["sg-name","sg-addr","sg-why","sg-yourname","sg-email"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
-  alert("Thanks for the suggestion! We review everything and will reach out if we add it. 🌲");
-}
 function submitAdvertise(){
   const name=document.getElementById("adv-name")?document.getElementById("adv-name").value.trim():"";
   const email=document.getElementById("adv-email")?document.getElementById("adv-email").value.trim():"";
