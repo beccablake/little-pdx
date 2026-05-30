@@ -300,6 +300,7 @@ body::before{
 .tag-daytrip    {background:#F0F0FF;         color:#3D3DA0;border-color:rgba(61,61,160,0.2)}
 .tag-biking     {background:#FFF8E0;         color:#7A5C00;border-color:rgba(122,92,0,0.2)}
 .tag-indoor     {background:#F0E8FF;         color:#5A00A0;border-color:rgba(90,0,160,0.2)}
+.tag-books      {background:#FFF5E0;         color:#7A4500;border-color:rgba(122,69,0,0.2)}
 .tag-misc      {background:#F5F5F0;         color:#555548;border-color:rgba(85,85,72,0.2)}
 .tag-free      {background:#EDFFF5;         color:#0A6B3A;border-color:rgba(10,107,58,0.2)}
 
@@ -652,29 +653,34 @@ body::before{
   #sidebar{display:none}
   #suggestbtn{bottom:55px;right:14px}
 
-  /* Nav - hide search and extra buttons, keep logo and key actions */
+  /* Nav - hide search, keep logo and key actions */
   .nav-search{display:none}
   .nav-right .btn-outline{display:none}
   .btn-orange.btn-sm{font-size:11px;padding:6px 10px}
+  #nav-about-btn{display:flex !important}
 
-  /* Hero - more compact on mobile */
-  .hero-left{padding:16px 16px 12px}
-  .hero-title{font-size:28px}
-  .hero-tagline{font-size:13px;margin-bottom:10px}
-  .hero-actions .btn-ghost-pine{display:none}
-  .hero-adstrip{padding:8px 14px;font-size:11px}
-  .adstrip-link{display:none}
+  /* Hero - hidden on mobile, shown as modal instead */
+  #hero-banner{display:none !important}
+
+  /* Filter bar sits right below nav on mobile */
+  #filterbar-wrap{top:60px}
 
   /* Filter bar - smaller pills on mobile */
   .pill{font-size:12px;padding:5px 11px}
   .fb-arrow{width:26px}
 
+  /* App fills from just below filterbar */
+  #app{transition:top 0.15s ease}
+
   /* Map takes full width and fills container on mobile */
-  #mapwrap{width:100%;flex:1}
+  #mapwrap{width:100%;flex:1;height:100%}
   #map{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
 
   /* Footer strip - compact */
   #footstrip{font-size:12px;padding:7px 12px}
+
+  /* Hero modal on mobile */
+  #mobile-hero-overlay{display:flex !important}
 }
 </style>
 </head>
@@ -691,6 +697,7 @@ body::before{
     <input id="search" type="text" placeholder="Parks, food, classes…" autocomplete="off">
   </div>
   <div class="nav-right">
+    <button id="nav-about-btn" onclick="openMobileHero()" style="display:none" class="btn btn-outline btn-sm">🌲 About</button>
     <button class="btn btn-outline btn-sm" onclick="toggleRec()">📌 Recommended</button>
     <button class="btn btn-outline btn-sm" onclick="toggleZip()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -727,6 +734,24 @@ body::before{
   <button id="hero-collapse-btn" onclick="toggleHero()" title="Minimize header">▲</button>
 </div>
 
+<!-- MOBILE HERO OVERLAY -->
+<div id="mobile-hero-overlay" style="display:none;position:fixed;inset:0;z-index:1800;background:rgba(27,58,45,0.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeMobileHero()">
+  <div style="background:var(--sand);width:100%;border-radius:24px 24px 0 0;padding:20px 24px 40px;box-shadow:0 -8px 40px rgba(0,0,0,0.15);max-height:85vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:var(--sand-dd);border-radius:99px;margin:0 auto 16px"></div>
+    <div class="hero-eyebrow">🌲 Beaverton & Portland Metro</div>
+    <div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--pine);letter-spacing:-1px;line-height:1;margin-bottom:8px">Little PDX</div>
+    <div style="font-size:14px;color:var(--navy-m);line-height:1.6;margin-bottom:18px">Your minimalist resource for kid-friendly adventures in the PDX area.</div>
+    <div class="hero-adstrip" style="margin:0 -24px;padding:12px 24px;margin-bottom:16px">
+      <span class="adstrip-icon">🤝</span>
+      <div class="adstrip-text"><strong>On advertising:</strong> Little PDX is supported by local businesses, not ad networks. Any featured listing is hand-picked and relevant. No tracking, no pop-ups, no noise.</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-pine" style="flex:1;justify-content:center" onclick="closeMobileHero()">Explore the map ↓</button>
+      <button class="btn btn-ghost-pine" style="flex:1;justify-content:center" onclick="closeMobileHero();openSuggestNew()">Suggest a place</button>
+    </div>
+  </div>
+</div>
+
 <!-- FILTER BAR -->
 <div id="filterbar-wrap">
 <button class="fb-arrow fb-arrow-left" id="fb-left" onclick="scrollFilters(-1)">‹</button>
@@ -741,6 +766,7 @@ body::before{
   <button class="pill"        data-f="daytrip"     onclick="toggleFilter('daytrip',this)">🚗 Day trip</button>
   <button class="pill"        data-f="biking"      onclick="toggleFilter('biking',this)">🚲 Biking</button>
   <button class="pill"        data-f="indoor"      onclick="toggleFilter('indoor',this)">🏠 Indoor play</button>
+  <button class="pill"        data-f="books"       onclick="toggleFilter('books',this)">📚 Books</button>
   <button class="pill"        data-f="bigkids"     onclick="toggleFilter('bigkids',this)">🏃 Big kids</button>
   <button class="pill"        data-f="littlekids"  onclick="toggleFilter('littlekids',this)">👶 Little kids</button>
   <button class="pill"        data-f="food"        onclick="toggleFilter('food',this)">🍕 Eat</button>
@@ -966,7 +992,7 @@ let AIRTABLE_TOKEN = AIRTABLE_READ_TOKEN; // Write access upgraded when admin lo
 function recordToPlace(rec){
   const f = rec.fields;
   // Map Airtable tag labels back to internal keys
-  const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc","Destination playground":"destination","Hiking":"hiking","Swimming":"swimming","Animals":"animals","Day trip":"daytrip","Biking":"biking","Indoor play":"indoor"};
+  const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc","Destination playground":"destination","Hiking":"hiking","Swimming":"swimming","Animals":"animals","Day trip":"daytrip","Biking":"biking","Indoor play":"indoor","Books":"books"};
   const tags = (f.Tags||[]).map(t=>TAG_TO_KEY[t]||t.toLowerCase().replace(/\s+/g,""));
   return {
     id: rec.id,          // Airtable record ID
@@ -1092,7 +1118,7 @@ let map, markers = {};
 let zipBarOpen = false;
 let editingId = null;
 let nextId = 20;
-const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free",destination:"Destination playground",hiking:"Hiking",swimming:"Swimming",animals:"Animals",daytrip:"Day trip",biking:"Biking",indoor:"Indoor play"};
+const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free",destination:"Destination playground",hiking:"Hiking",swimming:"Swimming",animals:"Animals",daytrip:"Day trip",biking:"Biking",indoor:"Indoor play",books:"Books"};
 
 // ─── FILTER & MATCH ───────────────────────────────────────────────────────────
 function matches(p){
@@ -1558,7 +1584,7 @@ function renderApPlaces(body){
 
 function renderApForm(body){
   const p=editingId ? PLACES.find(x=>x.id===editingId) : null;
-  const allTags=["park","destination","splashpad","hiking","swimming","animals","daytrip","biking","indoor","bigkids","littlekids","food","classes","store","free","misc"];
+  const allTags=["park","destination","splashpad","hiking","swimming","animals","daytrip","biking","indoor","books","bigkids","littlekids","food","classes","store","free","misc"];
   body.innerHTML=`
     <div class="ap-form">
       <h4>${p?"Edit: "+p.name:"Add a new place"}</h4>
@@ -1956,6 +1982,14 @@ function apDeletePost(id){
   renderApPosts(document.getElementById("ap-body"));
 }
 
+// ─── MOBILE HERO ──────────────────────────────────────────────────────────────
+function openMobileHero(){
+  document.getElementById("mobile-hero-overlay").style.display="flex";
+}
+function closeMobileHero(){
+  document.getElementById("mobile-hero-overlay").style.display="none";
+}
+
 // ─── FILTER BAR SCROLL ARROWS ─────────────────────────────────────────────────
 function scrollFilters(dir){
   const fb = document.getElementById("filterbar");
@@ -1983,11 +2017,12 @@ function setAppTop(){
   const filterwrap = document.getElementById("filterbar-wrap");
   const app = document.getElementById("app");
   if(!app || !filterwrap) return;
-  // Use the bottom edge of the filterbar-wrap directly — most reliable on mobile
-  const bottom = filterwrap.getBoundingClientRect().bottom + window.scrollY;
+  const rect = filterwrap.getBoundingClientRect();
+  // On mobile hero is hidden so filterwrap sits right below nav (top ~60px)
+  // getBoundingClientRect().bottom gives us the exact bottom edge in viewport coords
+  const bottom = rect.bottom + window.scrollY;
   const zipH = zipBarOpen ? (document.getElementById("zipbar")||{offsetHeight:36}).offsetHeight : 0;
-  const top = bottom + zipH;
-  app.style.top = top + "px";
+  app.style.top = (bottom + zipH) + "px";
   if(map) map.invalidateSize();
 }
 
