@@ -195,7 +195,7 @@ body::before{
 .pill:hover{border-color:var(--orange);color:var(--orange)}
 .pill.active{background:var(--orange);border-color:var(--orange);color:white}
 .pill-sep{width:1px;height:26px;background:var(--border);flex-shrink:0;margin:0 2px}
-.view-btns{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+.view-btns{display:none;gap:4px;margin-left:auto;flex-shrink:0}
 .vbtn{
   width:36px;height:36px;border-radius:var(--r);border:1.5px solid var(--border-m);
   background:var(--white);color:var(--navy-m);cursor:pointer;
@@ -206,13 +206,13 @@ body::before{
 
 /* ─── ZIP JUMP BAR ──────────────────────────────────────────────── */
 #zipbar{
-  position:fixed;top:112px;left:0;right:0;z-index:800;
+  position:sticky;top:0;left:0;right:0;z-index:800;
   background:var(--teal-p);border-bottom:1px solid rgba(0,137,123,0.2);
-  padding:7px 20px;display:flex;align-items:center;gap:10px;
-  transform:translateY(-100%);opacity:0;pointer-events:none;
-  transition:all 0.25s ease;
+  padding:0 20px;display:flex;align-items:center;gap:10px;
+  max-height:0;overflow:hidden;opacity:0;pointer-events:none;
+  transition:max-height 0.25s ease, opacity 0.2s, padding 0.25s ease;
 }
-#zipbar.open{transform:translateY(0);opacity:1;pointer-events:all}
+#zipbar.open{max-height:52px;padding:7px 20px;opacity:1;pointer-events:all}
 #zipbar label{font-size:13px;font-weight:600;color:var(--teal-d)}
 #zip-input{
   padding:6px 12px;border-radius:99px;border:1.5px solid rgba(0,137,123,0.35);
@@ -654,6 +654,7 @@ body::before{
 .gate-error.on{display:block}
 
 /* ─── NO RESULTS ─────────────────────────────────────────────────── */
+.noresults{padding:32px 20px;text-align:center}
 .noresults-em{font-size:42px;margin-bottom:12px}
 .noresults h4{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:5px}
 .noresults p{font-size:13px;color:var(--navy-m)}
@@ -1482,13 +1483,7 @@ const ZIP_LL = {
 };
 function toggleZip(){
   zipBarOpen=!zipBarOpen;
-  const zipbar=document.getElementById("zipbar");
-  if(zipBarOpen){
-    // Position directly below wherever the filterbar actually is
-    const fwBottom=document.getElementById("filterbar-wrap").getBoundingClientRect().bottom;
-    zipbar.style.top=Math.round(fwBottom)+"px";
-  }
-  zipbar.classList.toggle("open",zipBarOpen);
+  document.getElementById("zipbar").classList.toggle("open",zipBarOpen);
   setTimeout(setAppTop,50);
   if(zipBarOpen) document.getElementById("zip-input").focus();
   document.getElementById("zip-status").textContent="";
@@ -2254,10 +2249,14 @@ window.addEventListener("load",()=>{
     openMobileHero();
   }
 
-  map=L.map("map",{center:[45.485,-122.800],zoom:12,zoomControl:true});
+  map=L.map("map",{center:[45.485,-122.800],zoom:12,zoomControl:true,
+    zoomAnimation:true,markerZoomAnimation:true});
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
     attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains:"abcd",maxZoom:19
+    subdomains:"abcd",maxZoom:19,
+    keepBuffer:4,          // keep more tiles buffered around the viewport
+    updateWhenZooming:false, // don't swap tiles mid-zoom — scale old ones instead
+    updateWhenIdle:false   // update tiles as you pan so they're ready sooner
   }).addTo(map);
   // Re-sort sidebar when map is panned or zoomed
   map.on("moveend", ()=>{ if(document.getElementById("sb-sort").value==="nearest") renderSidebar(); });
