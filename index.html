@@ -126,7 +126,7 @@ body::before{
 }
 .hero-tagline{
   font-size:clamp(12px,1.5vw,15px);color:var(--navy-m);
-  line-height:1.5;margin-bottom:16px;max-width:400px;
+  line-height:1.5;margin-bottom:16px;
 }
 .hero-actions{display:flex;gap:8px;flex-wrap:wrap}
 .btn-pine{
@@ -165,6 +165,7 @@ body::before{
 /* ─── FILTER BAR ────────────────────────────────────────────────── */
 #filterbar-wrap{
   position:sticky;top:60px;z-index:900;
+  width:100%;
   background:rgba(245,242,236,0.97);backdrop-filter:blur(8px);
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;
@@ -663,6 +664,12 @@ body::before{
 #emoji-picker{display:none;background:white;border:1.5px solid var(--border-m);border-radius:var(--rl);padding:12px;max-height:260px;overflow-y:auto;margin-bottom:12px;margin-top:6px}
 #emoji-picker.open{display:block !important}
 
+/* ─── DESKTOP: stretch filter pills edge to edge ─────────────────── */
+@media(min-width:901px){
+  #filterbar{justify-content:space-between;padding:0 4px}
+  .pill{flex:1;min-width:fit-content;justify-content:center}
+}
+
 /* ─── MOBILE FILTER SHEET ────────────────────────────────────────── */
 #filter-sheet{
   position:fixed;inset:0;z-index:1500;
@@ -891,6 +898,7 @@ body::before{
   <button class="pill"        data-f="free"        onclick="toggleFilter('free',this)">🆓 Free</button>
   <button class="pill"        data-f="misc"        onclick="toggleFilter('misc',this)">✨ Misc</button>
   <div class="pill-sep"></div>
+  <div style="flex-shrink:0;width:8px"></div>
   <div class="view-btns">
     <button class="vbtn active" id="v-map" title="Map" onclick="setView('map')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
@@ -901,6 +909,7 @@ body::before{
   </div>
 </div>
 <button class="fb-arrow fb-arrow-right" id="fb-right" onclick="scrollFilters(1)">›</button>
+</div><!-- /filterbar-wrap -->
 
 <!-- ZIP BAR -->
 <div id="zipbar">
@@ -910,7 +919,6 @@ body::before{
   <span id="zip-status"></span>
   <button id="zip-close" onclick="toggleZip()">✕</button>
 </div>
-</div><!-- /filterbar-wrap -->
 
 <!-- MAIN APP -->
 <div id="app">
