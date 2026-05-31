@@ -256,7 +256,14 @@ body::before{
 /* Sponsored card in sidebar */
 /* Sponsor rotator */
 #sb-sponsor-wrap{margin:10px 12px}
-#sb-sponsor-slide .sb-sponsor{margin:0}
+#sb-sponsor-slide .sb-sponsor{
+  margin:0;
+  height:110px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
 .sp-controls{
   display:flex;align-items:center;justify-content:center;
   gap:8px;padding:6px 0 2px;
@@ -423,7 +430,7 @@ body::before{
   z-index:5000;background:var(--pine);color:white;
   padding:18px 28px;border-radius:var(--rl);
   font-size:15px;line-height:1.5;text-align:center;
-  max-width:320px;width:90%;
+  max-width:400px;width:92%;
   box-shadow:var(--shadow-lg);
   opacity:0;pointer-events:none;
   transition:opacity 0.2s,transform 0.2s;
@@ -1342,7 +1349,7 @@ function renderSponsorSlide(){
       <div class="sb-sponsor" onclick="selectPlace('${p.id}')">
         <div class="sp-eyebrow">✦ Featured Partner</div>
         <h4>${p.emoji} ${p.name}</h4>
-        <p>${p.desc.length>90?p.desc.substring(0,90)+"…":p.desc}</p>
+        <p style="overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${p.desc}</p>
         <span class="sb-sponsor-cta">View listing →</span>
       </div>`;
   } else {
@@ -2412,7 +2419,6 @@ window.addEventListener("load", ()=>{
   if(!sheet) return;
   let startY = 0, currentY = 0, dragging = false;
   sheet.addEventListener("touchstart", e=>{
-    // Only start drag from the handle area (top 40px)
     if(e.touches[0].clientY - sheet.getBoundingClientRect().top > 40) return;
     startY = e.touches[0].clientY;
     dragging = true;
@@ -2429,6 +2435,38 @@ window.addEventListener("load", ()=>{
     const diff = currentY - startY;
     sheet.style.transform = "";
     if(diff > 80) closeMobileHero();
+  });
+});
+
+// Drag-to-dismiss on the listing detail drawer (mobile bottom sheet)
+window.addEventListener("load", ()=>{
+  const inner = document.getElementById("drawer-inner");
+  if(!inner) return;
+  let startY = 0, currentY = 0, dragging = false;
+  inner.addEventListener("touchstart", e=>{
+    // Only drag from the handle area (top 50px)
+    if(e.touches[0].clientY - inner.getBoundingClientRect().top > 50) return;
+    startY = e.touches[0].clientY;
+    dragging = true;
+    inner.style.transition = "none";
+  }, {passive:true});
+  inner.addEventListener("touchmove", e=>{
+    if(!dragging) return;
+    currentY = e.touches[0].clientY;
+    const diff = Math.max(0, currentY - startY);
+    inner.style.transform = `translateY(${diff}px)`;
+  }, {passive:true});
+  inner.addEventListener("touchend", ()=>{
+    if(!dragging) return;
+    dragging = false;
+    inner.style.transition = "";
+    const diff = currentY - startY;
+    if(diff > 80){
+      inner.style.transform = "";
+      closeDrawer();
+    } else {
+      inner.style.transform = "";
+    }
   });
 });
 
