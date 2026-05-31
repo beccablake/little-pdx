@@ -654,32 +654,41 @@ body::before{
   #sidebar{display:none}
   #suggestbtn{bottom:55px;right:14px}
 
-  /* Nav - hide search, keep logo and key actions */
+  /* Nav */
   .nav-search{display:none}
   .nav-right .btn-outline{display:none}
   #nav-about-btn{display:flex;font-size:12px;padding:6px 12px}
-  /* Hero - hidden on mobile, shown as modal instead */
+
+  /* Hero - completely hidden on mobile */
   #hero-banner{display:none !important}
 
-  /* Filter bar sits right below nav on mobile */
-  #filterbar-wrap{top:60px}
+  /* Filter bar sits right below fixed nav */
+  #filterbar-wrap{
+    position:fixed !important;
+    top:60px !important;
+    left:0;right:0;
+    z-index:900;
+  }
 
-  /* Filter bar - smaller pills on mobile */
+  /* App: use padding-top instead of JS-calculated top
+     60px nav + 52px filterbar = 112px */
+  #app{
+    position:fixed !important;
+    top:112px !important;
+    left:0;right:0;bottom:0 !important;
+    transition:none !important;
+  }
+
+  /* Map fills its container */
+  #mapwrap{width:100%;flex:1;min-height:0}
+  #map{position:absolute;top:0;left:0;right:0;bottom:0}
+
+  /* Filter bar - smaller pills */
   .pill{font-size:12px;padding:5px 11px}
   .fb-arrow{width:26px}
 
-  /* App fills from just below filterbar to bottom of screen */
-  #app{transition:top 0.15s ease;bottom:0 !important}
-
-  /* Map takes full width and fills container on mobile */
-  #mapwrap{width:100%;flex:1;min-height:0;height:100%}
-  #map{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
-
   /* Footer strip - compact */
   #footstrip{font-size:12px;padding:7px 12px}
-
-  /* Hero modal on mobile */
-  #mobile-hero-overlay.open{display:flex}
 }
 </style>
 </head>
@@ -2023,11 +2032,15 @@ window.addEventListener("load",()=>{
 // ─── MAP INIT ─────────────────────────────────────────────────────────────────
 // setAppTop must be global so toggleHero and toggleZip can call it
 function setAppTop(){
+  // On mobile, CSS handles positioning with fixed top:112px — no JS needed
+  if(window.innerWidth <= 680) {
+    if(map) map.invalidateSize();
+    return;
+  }
+  // On desktop, calculate dynamically to handle collapsible hero
   const filterwrap = document.getElementById("filterbar-wrap");
   const app = document.getElementById("app");
   if(!app || !filterwrap) return;
-  // getBoundingClientRect().bottom = distance from top of viewport to bottom of filterbar
-  // This is exactly where #app should start — no scrollY needed since filterbar is sticky
   const top = filterwrap.getBoundingClientRect().bottom;
   const zipH = zipBarOpen ? (document.getElementById("zipbar")||{offsetHeight:36}).offsetHeight : 0;
   app.style.top = Math.round(top + zipH) + "px";
