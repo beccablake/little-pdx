@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Little PDX — Test Suite</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Courier New',monospace;background:#0d1117;color:#c9d1d9;padding:24px;font-size:13px;line-height:1.6}
+  h1{font-size:20px;color:#58a6ff;margin-bottom:4px;font-family:sans-serif}
+  .subtitle{color:#8b949e;margin-bottom:24px;font-family:sans-serif;font-size:13px}
+  .summary{
+    display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;
+    padding:16px;background:#161b22;border-radius:8px;border:1px solid #30363d;
+  }
+  .summary-item{text-align:center}
+  .summary-num{font-size:28px;font-weight:bold;font-family:sans-serif;line-height:1}
+  .summary-label{font-size:11px;color:#8b949e;margin-top:2px;font-family:sans-serif}
+  .pass-num{color:#3fb950}
+  .fail-num{color:#f85149}
+  .skip-num{color:#d29922}
+  .suite{margin-bottom:20px}
+  .suite-header{
+    background:#161b22;border:1px solid #30363d;border-radius:6px 6px 0 0;
+    padding:10px 14px;display:flex;align-items:center;gap:10px;
+    font-family:sans-serif;font-size:14px;font-weight:600;color:#e6edf3;
+    cursor:pointer;user-select:none;
+  }
+  .suite-header:hover{background:#1c2128}
+  .suite-icon{font-size:16px}
+  .suite-count{margin-left:auto;font-size:12px;color:#8b949e;font-weight:400}
+  .suite-tests{border:1px solid #30363d;border-top:none;border-radius:0 0 6px 6px;overflow:hidden}
+  .test{
+    display:flex;align-items:flex-start;gap:10px;padding:8px 14px;
+    border-bottom:1px solid #21262d;font-size:12px;
+  }
+  .test:last-child{border-bottom:none}
+  .test:hover{background:#0d1117}
+  .test-status{font-size:14px;flex-shrink:0;margin-top:1px}
+  .test-name{flex:1;color:#c9d1d9}
+  .test-detail{font-size:11px;color:#8b949e;margin-top:2px}
+  .test-error{font-size:11px;color:#f85149;margin-top:2px;font-family:'Courier New',monospace}
+  .test-pass .test-name{color:#3fb950}
+  .test-fail .test-name{color:#f85149}
+  .test-skip .test-name{color:#d29922}
+  .run-btn{
+    background:#238636;color:white;border:none;padding:10px 24px;
+    border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;
+    font-family:sans-serif;transition:background 0.15s;margin-bottom:20px;
+  }
+  .run-btn:hover{background:#2ea043}
+  .run-btn:disabled{background:#21262d;color:#8b949e;cursor:not-allowed}
+  .progress{
+    height:4px;background:#21262d;border-radius:2px;margin-bottom:20px;overflow:hidden;
+  }
+  .progress-bar{height:100%;background:#238636;width:0%;transition:width 0.2s;border-radius:2px}
+  .airtable-note{
+    background:#161b22;border:1px solid #d29922;border-radius:6px;
+    padding:12px 16px;margin-bottom:20px;font-size:12px;color:#d29922;
+    font-family:sans-serif;
+  }
+  .airtable-note input{
+    background:#0d1117;border:1px solid #30363d;color:#c9d1d9;
+    padding:4px 8px;border-radius:4px;font-size:12px;width:400px;
+    font-family:'Courier New',monospace;margin-top:6px;
+  }
+  .timestamp{color:#8b949e;font-size:11px;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<h1>🌲 Little PDX — Test Suite</h1>
+<p class="subtitle">Automated tests for littlepdx.com · Run after every deployment</p>
+
+<div class="airtable-note">
+  ⚠️ Some tests require your Airtable token to test live data fetching.<br>
+  <input type="text" id="test-token" placeholder="Paste your Airtable token here (optional — skip to run offline tests only)">
+</div>
+
+<button class="run-btn" id="run-btn" onclick="runAllTests()">▶ Run all tests</button>
+
+<div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+<div class="timestamp" id="timestamp"></div>
+
+<div class="summary" id="summary" style="display:none">
+  <div class="summary-item"><div class="summary-num pass-num" id="s-pass">0</div><div class="summary-label">Passed</div></div>
+  <div class="summary-item"><div class="summary-num fail-num" id="s-fail">0</div><div class="summary-label">Failed</div></div>
+  <div class="summary-item"><div class="summary-num skip-num" id="s-skip">0</div><div class="summary-label">Skipped</div></div>
+  <div class="summary-item"><div class="summary-num" id="s-total" style="color:#e6edf3">0</div><div class="summary-label">Total</div></div>
+  <div class="summary-item"><div class="summary-num" id="s-time" style="color:#58a6ff">0ms</div><div class="summary-label">Duration</div></div>
+</div>
+
+<div id="results"></div>
+
+<script>
+// ─── TEST FRAMEWORK ────────────────────────────────────────────────────────────
+const SITE_URL = "https://littlepdx.com";
+const AIRTABLE_BASE_ID = "appMvqCOaFTB1XgkM";
+const AIRTABLE_TABLE = "Table 1";
+
+let results = [];
+let passes = 0, fails = 0, skips = 0;
+
+function assert(condition, message){
+  if(!condition) throw new Error(message);
+}
+function assertEqual(a, b, message){
+  if(a !== b) throw new Error(`${message}: expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+}
+function assertIncludes(arr, item, message){
+  if(!arr.includes(item)) throw new Error(`${message}: ${JSON.stringify(item)} not found in ${JSON.stringify(arr)}`);
+}
+function assertNotEmpty(val, message){
+  if(!val || (Array.isArray(val) && val.length === 0) || val === "") throw new Error(`${message}: value is empty`);
+}
+
+async function test(name, fn, skip=false){
+  if(skip){
+    results.push({name, status:"skip", detail:"Skipped"});
+    skips++;
+    return;
+  }
+  try {
+    await fn();
+    results.push({name, status:"pass"});
+    passes++;
+  } catch(e){
+    results.push({name, status:"fail", error:e.message});
+    fails++;
+  }
+}
+
+// ─── TEST SUITES ───────────────────────────────────────────────────────────────
+
+const SUITES = [
+  {
+    name:"🏷 Tag System",
+    icon:"🏷",
+    tests: async () => {
+      // TAG_LABELS - all tags have labels
+      const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free",destination:"Destination playground",hiking:"Hiking",swimming:"Swimming",animals:"Animals",daytrip:"Day trip",biking:"Biking",indoor:"Indoor play",books:"Books"};
+      const EXPECTED_TAGS = ["park","bigkids","littlekids","food","classes","store","splashpad","misc","free","destination","hiking","swimming","animals","daytrip","biking","indoor","books"];
+      const EXPECTED_AIRTABLE = ["Parks","Big kids","Little kids","Eat","Classes","Stores","Splash pads","Misc","Free","Destination playground","Hiking","Swimming","Animals","Day trip","Biking","Indoor play","Books"];
+      const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc","Destination playground":"destination","Hiking":"hiking","Swimming":"swimming","Animals":"animals","Day trip":"daytrip","Biking":"biking","Indoor play":"indoor","Books":"books"};
+
+      await test("All expected internal tag keys exist in TAG_LABELS", ()=>{
+        EXPECTED_TAGS.forEach(tag=>{
+          assert(TAG_LABELS[tag], `Missing TAG_LABELS entry for: ${tag}`);
+        });
+      });
+      await test("TAG_LABELS has correct count (17 tags)", ()=>{
+        assertEqual(Object.keys(TAG_LABELS).length, 17, "TAG_LABELS count");
+      });
+      await test("TAG_TO_KEY maps all Airtable labels to internal keys", ()=>{
+        EXPECTED_AIRTABLE.forEach(label=>{
+          assert(TAG_TO_KEY[label], `Missing TAG_TO_KEY entry for Airtable label: "${label}"`);
+        });
+      });
+      await test("TAG_TO_KEY and TAG_LABELS are mirror-consistent", ()=>{
+        Object.entries(TAG_TO_KEY).forEach(([airtableLabel, internalKey])=>{
+          assert(TAG_LABELS[internalKey], `TAG_TO_KEY maps "${airtableLabel}" → "${internalKey}" but TAG_LABELS has no entry for "${internalKey}"`);
+          assertEqual(TAG_LABELS[internalKey], airtableLabel, `Label mismatch for key "${internalKey}"`);
+        });
+      });
+      await test("No duplicate values in TAG_LABELS", ()=>{
+        const values = Object.values(TAG_LABELS);
+        const unique = new Set(values);
+        assertEqual(unique.size, values.length, "Duplicate label values found");
+      });
+      await test("No duplicate keys in TAG_TO_KEY", ()=>{
+        const keys = Object.keys(TAG_TO_KEY);
+        const unique = new Set(keys);
+        assertEqual(unique.size, keys.length, "Duplicate keys in TAG_TO_KEY");
+      });
+      await test("Filter pill count matches TAG_LABELS count", async ()=>{
+        const res = await fetch(SITE_URL).catch(()=>null);
+        if(!res) { skips++; results[results.length-1] = {name:"Filter pill count matches TAG_LABELS count", status:"skip", detail:"Site unreachable — skipped"}; passes--; return; }
+        const html = await res.text();
+        const pills = (html.match(/data-f="[^"]+"/g)||[]).filter(p=>p !== 'data-f="all"');
+        assertEqual(pills.length, 17, "Filter pill count");
+      });
+    }
+  },
+  {
+    name:"🌐 Site Availability",
+    icon:"🌐",
+    tests: async () => {
+      await test("Site loads at littlepdx.com", async ()=>{
+        const res = await fetch(SITE_URL);
+        assert(res.ok, `Site returned status ${res.status}`);
+      });
+      await test("Site returns HTML content-type", async ()=>{
+        const res = await fetch(SITE_URL);
+        const ct = res.headers.get("content-type")||"";
+        assert(ct.includes("text/html"), `Expected text/html, got: ${ct}`);
+      });
+      await test("Site contains Little PDX branding", async ()=>{
+        const res = await fetch(SITE_URL);
+        const html = await res.text();
+        assert(html.includes("Little PDX"), "Little PDX branding not found in HTML");
+      });
+      await test("Leaflet map library is loaded", async ()=>{
+        const res = await fetch(SITE_URL);
+        const html = await res.text();
+        assert(html.includes("leaflet"), "Leaflet library not referenced in HTML");
+      });
+      await test("config.js is referenced", async ()=>{
+        const res = await fetch(SITE_URL);
+        const html = await res.text();
+        assert(html.includes("config.js"), "config.js not referenced in HTML");
+      });
+      await test("config.js loads successfully", async ()=>{
+        const res = await fetch(`${SITE_URL}/config.js`);
+        assert(res.ok, `config.js returned status ${res.status}`);
+      });
+      await test("config.js contains Airtable base ID", async ()=>{
+        const res = await fetch(`${SITE_URL}/config.js`);
+        const text = await res.text();
+        assert(text.includes("AIRTABLE_BASE_ID"), "AIRTABLE_BASE_ID not in config.js");
+      });
+      await test("config.js contains Airtable table name", async ()=>{
+        const res = await fetch(`${SITE_URL}/config.js`);
+        const text = await res.text();
+        assert(text.includes("AIRTABLE_TABLE"), "AIRTABLE_TABLE not in config.js");
+      });
+      await test("config.js has correct base ID (not placeholder)", async ()=>{
+        const res = await fetch(`${SITE_URL}/config.js`);
+        const text = await res.text();
+        assert(text.includes("appMvqCOaFTB1XgkM"), "Base ID missing or incorrect in config.js");
+        assert(!text.includes("PASTE_YOUR"), "Token is still placeholder in config.js");
+      });
+    }
+  },
+  {
+    name:"🗺 HTML Structure",
+    icon:"🗺",
+    tests: async () => {
+      let html = "";
+      await test("Fetch site HTML", async ()=>{
+        const res = await fetch(SITE_URL);
+        html = await res.text();
+        assert(html.length > 1000, "HTML too short — something is wrong");
+      });
+
+      const requiredIds = ["nav","filterbar","filterbar-wrap","app","sidebar","mapwrap","map","drawer","footstrip","suggestbtn","suggest-modal","advertise-modal","admin-gate","admin-overlay","mobile-hero-overlay","rec-section"];
+      for(const id of requiredIds){
+        await test(`Element #${id} exists in HTML`, ()=>{
+          assert(html.includes(`id="${id}"`), `#${id} not found in HTML`);
+        });
+      }
+
+      await test("All filter pills have data-f attributes", ()=>{
+        const pills = html.match(/class="pill[^"]*"[^>]*data-f/g)||[];
+        assert(pills.length >= 17, `Only ${pills.length} filter pills found, expected 17+`);
+      });
+      await test("Admin panel has all 6 tabs", ()=>{
+        const tabs = ["Places","Add New","Posts","Sponsors","Suggestions","Stats"];
+        tabs.forEach(tab=>{
+          assert(html.includes(`>${tab}</button>`), `Admin tab "${tab}" not found`);
+        });
+      });
+      await test("Site has viewport meta tag for mobile", ()=>{
+        assert(html.includes('name="viewport"'), "Viewport meta tag missing");
+      });
+      await test("Site has proper page title", ()=>{
+        assert(html.includes("<title>Little PDX"), "Page title missing or wrong");
+      });
+      await test("Google Fonts loaded", ()=>{
+        assert(html.includes("fonts.googleapis.com"), "Google Fonts not loaded");
+      });
+    }
+  },
+  {
+    name:"⚙️ JavaScript Functions",
+    icon:"⚙️",
+    tests: async () => {
+      let html = "";
+      try { const r = await fetch(SITE_URL); html = await r.text(); } catch(e){}
+
+      const requiredFns = [
+        "function toggleFilter","function renderSidebar","function renderGrid",
+        "function renderAll","function selectPlace","function openDrawer","function closeDrawer",
+        "function fetchFromAirtable","function saveToAirtable","function deleteFromAirtable",
+        "function recordToPlace","function setAppTop","function openAdmin","function checkGate",
+        "function submitSuggest","function submitAdvertise","function apSavePlace",
+        "function apDeletePlace","function apToggleFeatured","function renderApPlaces",
+        "function renderApForm","function renderApPosts","function renderApSponsors",
+        "function renderApSuggestions","function renderApStats","function toggleHero",
+        "function toggleZip","function rotateFoot","function distKm","function sorted",
+        "function renderRec","function openPost","function closePost",
+        "function openMobileHero","function closeMobileHero","function updateFilterArrows",
+        "function scrollFilters","function showMapMessage","function clearMapMessage",
+        "function openSuggestNew","function openSuggestForPlace",
+      ];
+
+      for(const fn of requiredFns){
+        await test(`${fn}() is defined`, ()=>{
+          assert(html.includes(fn), `${fn} not found in source`);
+        });
+      }
+
+      await test("ADMIN_PASSWORD is set (not empty)", ()=>{
+        const match = html.match(/const ADMIN_PASSWORD\s*=\s*"([^"]+)"/);
+        assert(match && match[1].length >= 6, "ADMIN_PASSWORD missing or too short");
+      });
+      await test("ADMIN_PASSWORD is not the default value", ()=>{
+        assert(!html.includes('"littlepdx2026"'), "ADMIN_PASSWORD is still the default — please change it!");
+      });
+    }
+  },
+  {
+    name:"🔗 Airtable Integration",
+    icon:"🔗",
+    tests: async () => {
+      const token = document.getElementById("test-token").value.trim();
+      const skip = !token;
+
+      await test("Airtable API is reachable", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=1`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        assert(res.ok, `Airtable returned status ${res.status}`);
+      }, skip);
+
+      await test("Airtable returns records array", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=3`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        assert(Array.isArray(data.records), "records is not an array");
+      }, skip);
+
+      await test("Airtable records have required fields", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=5`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        assert(data.records.length > 0, "No records found in Airtable");
+        const requiredFields = ["Name","Description","Tags","Emoji","Latitude","Longitude"];
+        data.records.forEach((rec,i)=>{
+          requiredFields.forEach(field=>{
+            assert(rec.fields.hasOwnProperty(field), `Record ${i+1} missing field: ${field}`);
+          });
+        });
+      }, skip);
+
+      await test("Airtable Tags use correct option names", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const validTags = new Set(["Parks","Big kids","Little kids","Eat","Classes","Stores","Splash pads","Misc","Free","Destination playground","Hiking","Swimming","Animals","Day trip","Biking","Indoor play","Books"]);
+        const badTags = new Set();
+        data.records.forEach(rec=>{
+          (rec.fields.Tags||[]).forEach(tag=>{
+            if(!validTags.has(tag)) badTags.add(tag);
+          });
+        });
+        assert(badTags.size === 0, `Unknown tag values found: ${[...badTags].join(", ")}`);
+      }, skip);
+
+      await test("All records have valid coordinates", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const bad = [];
+        data.records.forEach(rec=>{
+          const lat = parseFloat(rec.fields.Latitude);
+          const lng = parseFloat(rec.fields.Longitude);
+          const name = rec.fields.Name||"Unknown";
+          // Portland metro area rough bounds
+          if(isNaN(lat)||lat < 44||lat > 47) bad.push(`${name}: bad lat ${rec.fields.Latitude}`);
+          if(isNaN(lng)||lng > -121||lng < -124) bad.push(`${name}: bad lng ${rec.fields.Longitude}`);
+        });
+        assert(bad.length === 0, `Records with bad coordinates:\n${bad.join("\n")}`);
+      }, skip);
+
+      await test("All records have a Name", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const unnamed = data.records.filter(r=>!r.fields.Name||r.fields.Name.trim()==="");
+        assert(unnamed.length === 0, `${unnamed.length} records are missing a Name`);
+      }, skip);
+
+      await test("All records have a Description", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const nodesc = data.records.filter(r=>!r.fields.Description||r.fields.Description.trim()==="");
+        assert(nodesc.length === 0, `Records missing Description: ${nodesc.map(r=>r.fields.Name).join(", ")}`);
+      }, skip);
+
+      await test("All records have at least 1 tag", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const notags = data.records.filter(r=>!r.fields.Tags||r.fields.Tags.length===0);
+        assert(notags.length === 0, `Records missing Tags: ${notags.map(r=>r.fields.Name).join(", ")}`);
+      }, skip);
+
+      await test("Photo URLs are valid format when present", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const badPhotos = [];
+        data.records.forEach(rec=>{
+          ["Photo 1","Photo 2","Photo 3"].forEach(field=>{
+            const url = rec.fields[field];
+            if(url && !url.startsWith("http")){
+              badPhotos.push(`${rec.fields.Name}: ${field} = "${url}"`);
+            }
+          });
+        });
+        assert(badPhotos.length === 0, `Invalid photo URLs:\n${badPhotos.join("\n")}`);
+      }, skip);
+
+      await test("Token has write access (can list tables)", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/meta/bases/${AIRTABLE_BASE_ID}/tables`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        assert(res.ok, `Token may not have schema.bases:read — status: ${res.status}`);
+      }, skip);
+    }
+  },
+  {
+    name:"📱 Mobile Compatibility",
+    icon:"📱",
+    tests: async () => {
+      let html = "";
+      try { const r = await fetch(SITE_URL); html = await r.text(); } catch(e){}
+
+      await test("Mobile viewport meta tag exists", ()=>{
+        assert(html.includes('name="viewport"') && html.includes('width=device-width'), "Missing proper viewport meta tag");
+      });
+      await test("#mobile-hero-overlay exists for mobile popup", ()=>{
+        assert(html.includes('id="mobile-hero-overlay"'), "#mobile-hero-overlay not found");
+      });
+      await test("openMobileHero function exists", ()=>{
+        assert(html.includes("function openMobileHero"), "openMobileHero function missing");
+      });
+      await test("closeMobileHero function exists", ()=>{
+        assert(html.includes("function closeMobileHero"), "closeMobileHero function missing");
+      });
+      await test("#nav-about-btn exists for mobile nav", ()=>{
+        assert(html.includes('id="nav-about-btn"'), "#nav-about-btn not found");
+      });
+      await test("About button does not have btn-outline class (would be hidden)", ()=>{
+        const btnMatch = html.match(/id="nav-about-btn"[^>]*/);
+        if(btnMatch){
+          assert(!btnMatch[0].includes("btn-outline"), "About button has btn-outline class — will be hidden on mobile by CSS rule");
+        }
+      });
+      await test("#app uses position:fixed", ()=>{
+        assert(html.includes("position:fixed;left:0;right:0;bottom:0"), "#app missing proper fixed positioning");
+      });
+      await test("-webkit-transform:translateZ(0) present for iOS rendering", ()=>{
+        assert(html.includes("-webkit-transform:translateZ(0)"), "Missing iOS GPU layer hint");
+      });
+      await test("setAppTop uses getBoundingClientRect (not scrollY)", ()=>{
+        assert(html.includes("getBoundingClientRect().bottom"), "setAppTop missing getBoundingClientRect");
+        assert(!html.includes("getBoundingClientRect().bottom + window.scrollY"), "setAppTop incorrectly adds window.scrollY");
+      });
+      await test("Map retries invalidateSize on load (iOS fix)", ()=>{
+        const retryCount = (html.match(/map\.invalidateSize/g)||[]).length;
+        assert(retryCount >= 3, `map.invalidateSize only called ${retryCount} times, expected 3+ for iOS reliability`);
+      });
+      await test("orientationchange listener present", ()=>{
+        assert(html.includes("orientationchange"), "No orientationchange listener — map may not resize on device rotation");
+      });
+      await test("-webkit-overflow-scrolling on filterbar", ()=>{
+        assert(html.includes("-webkit-overflow-scrolling:touch"), "Missing touch scrolling on filterbar");
+      });
+    }
+  },
+  {
+    name:"🔒 Security",
+    icon:"🔒",
+    tests: async () => {
+      let html = "";
+      try { const r = await fetch(SITE_URL); html = await r.text(); } catch(e){}
+
+      await test("Admin password is not default 'littlepdx2026'", ()=>{
+        assert(!html.includes('"littlepdx2026"'), "⚠️ Admin password is still the default — change it in index.html!");
+      });
+      await test("No hardcoded Airtable token in index.html", ()=>{
+        // Token format: pat followed by many characters
+        const tokenMatch = html.match(/patA[A-Za-z0-9]{40,}/);
+        assert(!tokenMatch, "Airtable token appears hardcoded in index.html — move to config.js only");
+      });
+      await test("PLACEHOLDER token not in config.js", async ()=>{
+        const res = await fetch(`${SITE_URL}/config.js`).catch(()=>null);
+        if(!res){skips++;results[results.length-1]={name:"PLACEHOLDER token not in config.js",status:"skip",detail:"config.js unreachable"};passes--;return;}
+        const text = await res.text();
+        assert(!text.includes("PASTE_YOUR_TOKEN_HERE"), "config.js still has placeholder token!");
+      });
+      await test("Admin gate requires password (gate element exists)", ()=>{
+        assert(html.includes('id="admin-gate"'), "Admin gate element missing");
+        assert(html.includes('id="gate-pw"'), "Admin password input missing");
+      });
+      await test("sessionStorage used for admin token persistence", ()=>{
+        assert(html.includes("sessionStorage"), "sessionStorage not used — admin token may not persist correctly");
+        assert(html.includes("lpdx_token"), "sessionStorage key lpdx_token not found");
+      });
+      await test("No eval() calls in source", ()=>{
+        const evals = (html.match(/\beval\s*\(/g)||[]);
+        assert(evals.length === 0, `Found ${evals.length} eval() call(s) — security risk`);
+      });
+    }
+  },
+  {
+    name:"💛 Data Quality",
+    icon:"💛",
+    tests: async () => {
+      const token = document.getElementById("test-token").value.trim();
+      const skip = !token;
+
+      await test("At least 10 listings exist", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        assert(data.records.length >= 10, `Only ${data.records.length} listings — need at least 10`);
+      }, skip);
+
+      await test("No duplicate listing names", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const names = data.records.map(r=>r.fields.Name?.toLowerCase().trim()).filter(Boolean);
+        const dupes = names.filter((n,i)=>names.indexOf(n)!==i);
+        assert(dupes.length === 0, `Duplicate listing names: ${[...new Set(dupes)].join(", ")}`);
+      }, skip);
+
+      await test("Listings spread across multiple tag types", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const tagCounts = {};
+        data.records.forEach(rec=>{
+          (rec.fields.Tags||[]).forEach(tag=>{ tagCounts[tag]=(tagCounts[tag]||0)+1; });
+        });
+        assert(Object.keys(tagCounts).length >= 3, `Only ${Object.keys(tagCounts).length} different tag types used — spread listings across more categories`);
+      }, skip);
+
+      await test("Descriptions are not too short (at least 20 chars)", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const short = data.records.filter(r=>(r.fields.Description||"").length < 20);
+        assert(short.length === 0, `Listings with too-short descriptions: ${short.map(r=>r.fields.Name).join(", ")}`);
+      }, skip);
+
+      await test("Coordinates are in Portland metro area (not default 0,0)", async ()=>{
+        const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
+          headers:{Authorization:`Bearer ${token}`}
+        });
+        const data = await res.json();
+        const zero = data.records.filter(r=>!r.fields.Latitude||!r.fields.Longitude||r.fields.Latitude===0||r.fields.Longitude===0);
+        assert(zero.length === 0, `Records with zero/missing coordinates: ${zero.map(r=>r.fields.Name).join(", ")}`);
+      }, skip);
+    }
+  },
+  {
+    name:"🧩 UI Components",
+    icon:"🧩",
+    tests: async () => {
+      let html = "";
+      try { const r = await fetch(SITE_URL); html = await r.text(); } catch(e){}
+
+      await test("Footer sponsor strip exists", ()=>{
+        assert(html.includes('id="footstrip"'), "Footer strip #footstrip not found");
+        assert(html.includes('id="fs-text"'), "Footer strip text element missing");
+        assert(html.includes('id="fs-link"'), "Footer strip link element missing");
+      });
+      await test("Hero banner exists with tagline", ()=>{
+        assert(html.includes('id="hero-banner"'), "Hero banner missing");
+        assert(html.includes("minimalist resource"), "Hero tagline missing");
+      });
+      await test("Suggest a place button exists", ()=>{
+        assert(html.includes('id="suggestbtn"'), "#suggestbtn missing");
+      });
+      await test("Advertise modal has founding partner messaging", ()=>{
+        assert(html.includes("Founding Partner"), "Founding partner messaging missing from advertise modal");
+        assert(html.includes("$49"), "$49 price not found in advertise modal");
+        assert(html.includes("first 3"), "First 3 partners messaging missing");
+      });
+      await test("Zip code jump bar exists", ()=>{
+        assert(html.includes('id="zipbar"'), "Zip bar missing");
+        assert(html.includes('id="zip-input"'), "Zip input missing");
+      });
+      await test("Filter scroll arrows exist", ()=>{
+        assert(html.includes('id="fb-left"'), "Left filter arrow missing");
+        assert(html.includes('id="fb-right"'), "Right filter arrow missing");
+      });
+      await test("House sponsor messages are defined (3 messages)", ()=>{
+        const matches = (html.match(/HOUSE_MESSAGES\s*=\s*\[/g)||[]);
+        assert(matches.length > 0, "HOUSE_MESSAGES not defined");
+        const msgCount = (html.match(/text:"[^"]+"/g)||[]).length;
+        assert(msgCount >= 3, `Only ${msgCount} house messages found, expected 3`);
+      });
+      await test("Recommended posts section exists", ()=>{
+        assert(html.includes('id="rec-section"'), "Recommended posts section missing");
+        assert(html.includes('id="rec-grid"'), "Recommended posts grid missing");
+      });
+      await test("Emoji picker in admin form", ()=>{
+        assert(html.includes('id="emoji-picker"'), "Emoji picker missing from admin form");
+        assert(html.includes("epick-btn"), "Emoji pick buttons missing");
+      });
+      await test("Detail drawer is centered modal (not bottom sheet)", ()=>{
+        assert(html.includes("align-items:center"), "Drawer should be centered modal");
+        assert(html.includes('id="drawer-inner"'), "#drawer-inner missing");
+      });
+      await test("Ad philosophy message is present", ()=>{
+        assert(html.includes("No tracking, no pop-ups"), "Ad philosophy messaging missing");
+      });
+    }
+  }
+];
+
+// ─── RUNNER ────────────────────────────────────────────────────────────────────
+async function runAllTests(){
+  const btn = document.getElementById("run-btn");
+  btn.disabled = true;
+  btn.textContent = "⏳ Running…";
+  results = []; passes = 0; fails = 0; skips = 0;
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("summary").style.display = "none";
+  document.getElementById("timestamp").textContent = "";
+
+  const startTime = Date.now();
+  const bar = document.getElementById("progress-bar");
+
+  let suiteResults = [];
+  let totalTests = SUITES.reduce((a,s)=>{ return a; }, 0);
+
+  for(let si = 0; si < SUITES.length; si++){
+    const suite = SUITES[si];
+    const suiteStart = results.length;
+    await suite.tests();
+    const suiteEnd = results.length;
+    suiteResults.push({
+      suite,
+      tests: results.slice(suiteStart, suiteEnd)
+    });
+    bar.style.width = ((si+1)/SUITES.length*100)+"%";
+  }
+
+  const elapsed = Date.now() - startTime;
+
+  // Render results
+  const container = document.getElementById("results");
+  suiteResults.forEach(({suite, tests})=>{
+    const suitePass = tests.filter(t=>t.status==="pass").length;
+    const suiteFail = tests.filter(t=>t.status==="fail").length;
+    const suiteSkip = tests.filter(t=>t.status==="skip").length;
+    const statusColor = suiteFail > 0 ? "#f85149" : suiteSkip === tests.length ? "#d29922" : "#3fb950";
+
+    const div = document.createElement("div");
+    div.className = "suite";
+    div.innerHTML = `
+      <div class="suite-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+        <span class="suite-icon">${suite.icon}</span>
+        <span>${suite.name}</span>
+        <span class="suite-count" style="color:${statusColor}">
+          ${suitePass}✓ ${suiteFail > 0 ? suiteFail+"✗ " : ""}${suiteSkip > 0 ? suiteSkip+"⊘" : ""}
+        </span>
+      </div>
+      <div class="suite-tests">
+        ${tests.map(t=>`
+          <div class="test test-${t.status}">
+            <span class="test-status">${t.status==="pass"?"✓":t.status==="fail"?"✗":"⊘"}</span>
+            <div>
+              <div class="test-name">${t.name}</div>
+              ${t.detail ? `<div class="test-detail">${t.detail}</div>` : ""}
+              ${t.error ? `<div class="test-error">→ ${t.error}</div>` : ""}
+            </div>
+          </div>`).join("")}
+      </div>`;
+    container.appendChild(div);
+  });
+
+  // Summary
+  document.getElementById("s-pass").textContent = passes;
+  document.getElementById("s-fail").textContent = fails;
+  document.getElementById("s-skip").textContent = skips;
+  document.getElementById("s-total").textContent = passes+fails+skips;
+  document.getElementById("s-time").textContent = elapsed+"ms";
+  document.getElementById("summary").style.display = "flex";
+  document.getElementById("timestamp").textContent = `Last run: ${new Date().toLocaleString()}`;
+  bar.style.background = fails > 0 ? "#f85149" : "#3fb950";
+
+  btn.disabled = false;
+  btn.textContent = fails > 0 ? `▶ Re-run (${fails} failed)` : "▶ Run again";
+}
+</script>
+</body>
+</html>
