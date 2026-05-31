@@ -1565,24 +1565,34 @@ function openSuggestNew(){
   document.getElementById("sg-addr-row").style.display = "";
   openModal("suggest-modal");
 }
-function submitSuggest(){
+async function submitSuggest(){
   const name=document.getElementById("sg-name").value.trim();
   const why=document.getElementById("sg-why").value.trim();
   const listingId=document.getElementById("sg-listing-id").value;
   if(!name){showToast("Please enter a place name.");return;}
   if(!why){showToast("Please fill in the details field.");return;}
-  SUGGESTIONS.unshift({
-    id:Date.now(), name,
-    type: listingId ? "correction" : "new",
-    linkedId: listingId || null,
-    cat: document.getElementById("sg-cat").value,
-    age: document.getElementById("sg-age").value,
-    addr: document.getElementById("sg-addr")?document.getElementById("sg-addr").value:"",
-    why,
-    submitter: document.getElementById("sg-yourname")?document.getElementById("sg-yourname").value:"",
-    email: document.getElementById("sg-email").value,
-    status:"pending"
-  });
+  const fields={
+    "Name": name,
+    "Type": listingId ? "correction" : "new",
+    "Category": document.getElementById("sg-cat")?.value||"",
+    "Best for": document.getElementById("sg-age")?.value||"",
+    "Address": document.getElementById("sg-addr")?.value||"",
+    "Why they love it": why,
+    "Submitter name": document.getElementById("sg-yourname")?.value||"",
+    "Submitter email": document.getElementById("sg-email")?.value||"",
+    "Status": "Pending",
+    "Submitted date": new Date().toISOString().split("T")[0]
+  };
+  // Save to Airtable if write token is available
+  if(typeof AIRTABLE_WRITE_TOKEN !== "undefined" && AIRTABLE_WRITE_TOKEN){
+    try{
+      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Suggestions`,{
+        method:"POST",
+        headers:{Authorization:`Bearer ${AIRTABLE_WRITE_TOKEN}`,"Content-Type":"application/json"},
+        body:JSON.stringify({fields})
+      });
+    } catch(e){ console.warn("Could not save suggestion to Airtable:",e); }
+  }
   closeModal("suggest-modal");
   ["sg-name","sg-addr","sg-why","sg-yourname","sg-email"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("sg-cat-row").style.display="";
@@ -1590,17 +1600,27 @@ function submitSuggest(){
   document.getElementById("sg-listing-id").value="";
   showToast(listingId?"Thanks for the note! We'll review it and update the listing. ✏️":"Thanks for the suggestion! We review everything and will reach out if we add it. 🌲");
 }
-function submitAdvertise(){
+async function submitAdvertise(){
   const name=document.getElementById("adv-name")?document.getElementById("adv-name").value.trim():"";
   const email=document.getElementById("adv-email")?document.getElementById("adv-email").value.trim():"";
   if(!name||!email){showToast("Please enter your business name and email.");return;}
-  SPONSORS.push({
-    id:Date.now(),name,email,
-    website:document.getElementById("adv-web")?document.getElementById("adv-web").value:"",
-    desc:document.getElementById("adv-desc")?document.getElementById("adv-desc").value:"",
-    status:"pending",
-    msg:`${name} — featured on Little PDX!`
-  });
+  const fields={
+    "Business name": name,
+    "Contact email": email,
+    "Website": document.getElementById("adv-web")?.value||"",
+    "About their business": document.getElementById("adv-desc")?.value||"",
+    "Status": "New",
+    "Submitted date": new Date().toISOString().split("T")[0]
+  };
+  if(typeof AIRTABLE_WRITE_TOKEN !== "undefined" && AIRTABLE_WRITE_TOKEN){
+    try{
+      await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Advertising%20Inquiries`,{
+        method:"POST",
+        headers:{Authorization:`Bearer ${AIRTABLE_WRITE_TOKEN}`,"Content-Type":"application/json"},
+        body:JSON.stringify({fields})
+      });
+    } catch(e){ console.warn("Could not save inquiry to Airtable:",e); }
+  }
   closeModal("advertise-modal");
   ["adv-name","adv-email","adv-web","adv-desc"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   showToast("Thanks! We'll be in touch within a couple of days. 🤝");
