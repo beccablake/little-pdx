@@ -30,7 +30,7 @@
   --shadow-lg:0 12px 48px rgba(0,0,0,0.13),0 4px 16px rgba(0,0,0,0.06);
   --r:10px;--rl:16px;--rxl:24px;
 }
-html,body{height:100%;font-family:'Nunito',sans-serif;background:var(--sand);color:var(--navy);font-size:15px;line-height:1.55}
+html,body{height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background:var(--sand);color:var(--navy);font-size:15px;line-height:1.55}
 button,input,select,textarea{font-family:'Nunito',sans-serif}
 
 /* PNW texture overlay on body */
@@ -399,6 +399,19 @@ body::before{
 }
 #dclose:hover{background:var(--sand-d)}
 
+/* ─── TOAST NOTIFICATION ─────────────────────────────────────────── */
+#toast{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.92);
+  z-index:5000;background:var(--pine);color:white;
+  padding:18px 28px;border-radius:var(--rl);
+  font-size:15px;line-height:1.5;text-align:center;
+  max-width:320px;width:90%;
+  box-shadow:var(--shadow-lg);
+  opacity:0;pointer-events:none;
+  transition:opacity 0.2s,transform 0.2s;
+}
+#toast.on{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:all}
+
 /* ─── FOOTER STRIP ──────────────────────────────────────────────── */
 #footstrip{
   position:fixed;bottom:0;left:0;right:0;z-index:700;
@@ -689,7 +702,7 @@ body::before{
 .mob-btn.filtered{background:var(--orange);color:white;border-color:var(--orange)}
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
-@media(max-width:680px){
+@media(max-width:900px){
   #sidebar{display:none}
   #suggestbtn{bottom:55px;right:14px}
 
@@ -697,6 +710,7 @@ body::before{
   .nav-search{display:none}
   .nav-right .btn-outline{display:none}
   .nav-right .btn-orange{display:none}
+  #nav-admin-btn{display:none !important}
   #nav-about-btn{display:flex;font-size:12px;padding:6px 12px}
 
   /* Hero - completely hidden on mobile */
@@ -752,17 +766,12 @@ body::before{
   .fs-link{font-size:12px}
   .fs-x{font-size:15px}
 
-  /* Mobile list view: sidebar uses fixed positioning so height is reliable */
+  /* Mobile list view: sidebar fills #app naturally as a flex child */
   #sidebar{
-    position:fixed !important;
-    top:112px !important;
-    left:0 !important; right:0 !important;
-    bottom:44px !important; /* sit above footstrip */
     width:100% !important;
-    z-index:50;
-    overflow:hidden;
+    min-width:0;
   }
-  #place-list{padding-bottom:12px}
+  #place-list{padding-bottom:50px}
 
   /* Drawer as bottom sheet on mobile */
   #drawer{align-items:flex-end !important;padding:0 !important}
@@ -797,12 +806,12 @@ body::before{
   </div>
   <div class="nav-right">
     <button id="nav-about-btn" onclick="openMobileHero()" class="btn btn-sm">🌲 About</button>
-    <button class="btn btn-outline btn-sm" onclick="toggleRec()">📌 Recommended</button>
+    <!-- Recommended button removed — section being redesigned -->
     <button class="btn btn-outline btn-sm" onclick="toggleZip()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
       Change area
     </button>
-    <button class="btn btn-outline btn-sm" onclick="openAdmin()">⚙ Admin</button>
+    <button id="nav-admin-btn" class="btn btn-outline btn-sm" onclick="openAdmin()">⚙ Admin</button>
     <button class="btn btn-orange btn-sm" onclick="openModal('advertise-modal')">✦ Founding rate: $49/mo</button>
   </div>
 </nav>
@@ -889,8 +898,8 @@ body::before{
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
     </button>
   </div>
-<button class="fb-arrow fb-arrow-right" id="fb-right" onclick="scrollFilters(1)">›</button>
 </div>
+<button class="fb-arrow fb-arrow-right" id="fb-right" onclick="scrollFilters(1)">›</button>
 
 <!-- ZIP BAR -->
 <div id="zipbar">
@@ -1062,6 +1071,9 @@ body::before{
   </div>
   <div class="rec-grid" id="rec-grid"></div>
 </div>
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast"></div>
 
 <!-- MOBILE FILTER SHEET -->
 <div id="filter-sheet" onclick="if(event.target===this)closeMobileFilters()">
@@ -1422,7 +1434,7 @@ function setView(v){
   const mapwrap=document.getElementById("mapwrap");
   const grid=document.getElementById("gridview");
   const sb=document.getElementById("sidebar");
-  const isMobile = window.innerWidth <= 680;
+  const isMobile = window.innerWidth <= 900;
   if(v==="grid"){
     if(isMobile){
       // On mobile: show sidebar card list (more native feel than grid)
@@ -1470,8 +1482,14 @@ const ZIP_LL = {
 };
 function toggleZip(){
   zipBarOpen=!zipBarOpen;
-  document.getElementById("zipbar").classList.toggle("open",zipBarOpen);
-  setTimeout(setAppTop, 50);
+  const zipbar=document.getElementById("zipbar");
+  if(zipBarOpen){
+    // Position directly below wherever the filterbar actually is
+    const fwBottom=document.getElementById("filterbar-wrap").getBoundingClientRect().bottom;
+    zipbar.style.top=Math.round(fwBottom)+"px";
+  }
+  zipbar.classList.toggle("open",zipBarOpen);
+  setTimeout(setAppTop,50);
   if(zipBarOpen) document.getElementById("zip-input").focus();
   document.getElementById("zip-status").textContent="";
 }
@@ -1547,8 +1565,8 @@ function submitSuggest(){
   const name=document.getElementById("sg-name").value.trim();
   const why=document.getElementById("sg-why").value.trim();
   const listingId=document.getElementById("sg-listing-id").value;
-  if(!name){alert("Please enter a place name.");return;}
-  if(!why){alert("Please fill in the details field.");return;}
+  if(!name){showToast("Please enter a place name.");return;}
+  if(!why){showToast("Please fill in the details field.");return;}
   SUGGESTIONS.unshift({
     id:Date.now(), name,
     type: listingId ? "correction" : "new",
@@ -1566,12 +1584,12 @@ function submitSuggest(){
   document.getElementById("sg-cat-row").style.display="";
   document.getElementById("sg-addr-row").style.display="";
   document.getElementById("sg-listing-id").value="";
-  alert(listingId?"Thanks for the note! We'll review it and update the listing. ✏️":"Thanks for the suggestion! We review everything and will reach out if we add it. 🌲");
+  showToast(listingId?"Thanks for the note! We'll review it and update the listing. ✏️":"Thanks for the suggestion! We review everything and will reach out if we add it. 🌲");
 }
 function submitAdvertise(){
   const name=document.getElementById("adv-name")?document.getElementById("adv-name").value.trim():"";
   const email=document.getElementById("adv-email")?document.getElementById("adv-email").value.trim():"";
-  if(!name||!email){alert("Please enter your business name and email.");return;}
+  if(!name||!email){showToast("Please enter your business name and email.");return;}
   SPONSORS.push({
     id:Date.now(),name,email,
     website:document.getElementById("adv-web")?document.getElementById("adv-web").value:"",
@@ -1581,7 +1599,7 @@ function submitAdvertise(){
   });
   closeModal("advertise-modal");
   ["adv-name","adv-email","adv-web","adv-desc"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
-  alert("Thanks! We'll be in touch within a couple of days. 🤝");
+  showToast("Thanks! We'll be in touch within a couple of days. 🤝");
 }
 function submitSponsor(){openModal("advertise-modal");}
 
@@ -1785,10 +1803,10 @@ async function apSavePlace(){
   const desc=document.getElementById("af-desc").value.trim();
   const lat=parseFloat(document.getElementById("af-lat").value);
   const lng=parseFloat(document.getElementById("af-lng").value);
-  if(!name||!desc){alert("Name and description are required.");return;}
-  if(isNaN(lat)||isNaN(lng)){alert("Please enter valid coordinates.");return;}
+  if(!name||!desc){showToast("Name and description are required.");return;}
+  if(isNaN(lat)||isNaN(lng)){showToast("Please enter valid coordinates.");return;}
   const tags=[...document.querySelectorAll("#af-tags .ttog.on")].map(el=>el.dataset.tag);
-  if(!tags.length){alert("Please select at least one tag.");return;}
+  if(!tags.length){showToast("Please select at least one tag.");return;}
   const data={
     name, desc, tags, lat, lng,
     emoji:document.getElementById("af-emoji").value||"🌟",
@@ -1819,9 +1837,9 @@ async function apSavePlace(){
     editingId=null;
     renderApPlaces(document.getElementById("ap-body"));
     document.querySelectorAll(".ap-tab").forEach((b,i)=>b.classList.toggle("on",i===0));
-    alert("✓ Saved: "+name);
+    showToast("✓ Saved: "+name);
   } catch(e){
-    alert("Error saving: "+e.message);
+    showToast("Error saving: "+e.message);
     if(btn){btn.textContent="✓ Save";btn.disabled=false;}
   }
 }
@@ -1840,7 +1858,7 @@ async function apDeletePlace(id){
     renderAll();
     renderApPlaces(document.getElementById("ap-body"));
   } catch(e){
-    alert("Error deleting: "+e.message);
+    showToast("Error deleting: "+e.message);
   }
 }
 async function apToggleFeatured(id){
@@ -1853,7 +1871,7 @@ async function apToggleFeatured(id){
     renderApPlaces(document.getElementById("ap-body"));
   } catch(e){
     p.featured=!p.featured; // revert
-    alert("Error updating: "+e.message);
+    showToast("Error updating: "+e.message);
   }
 }
 
@@ -1892,7 +1910,7 @@ function apDeleteSponsor(id){
 }
 function apAddSponsor(){
   const name=document.getElementById("sp-an").value.trim();
-  if(!name){alert("Enter a business name.");return;}
+  if(!name){showToast("Enter a business name.");return;}
   SPONSORS.push({id:Date.now(),name,email:document.getElementById("sp-ae").value,status:"active",msg:document.getElementById("sp-am").value||name+" — featured on Little PDX!"});
   renderApSponsors(document.getElementById("ap-body"));
 }
@@ -1931,7 +1949,7 @@ function apApproveSuggestion(id){
   const s=SUGGESTIONS.find(x=>x.id===id);
   if(!s) return;
   SUGGESTIONS=SUGGESTIONS.filter(x=>x.id!==id);
-  alert(`"${s.name}" approved! Go to Add New to enter its full details and add it to the map.`);
+  showToast(`"${s.name}" approved! Go to Add New to enter its full details and add it to the map.`);
   renderApSuggestions(document.getElementById("ap-body"));
 }
 function apDismissSuggestion(id){
@@ -2065,7 +2083,7 @@ function renderApPostForm(body, id){
 function apSavePost(id){
   const title = document.getElementById("pf-title").value.trim();
   const content = document.getElementById("pf-content").value.trim();
-  if(!title||!content){alert("Title and content are required.");return;}
+  if(!title||!content){showToast("Title and content are required.");return;}
   const data = {
     title, content,
     emoji: document.getElementById("pf-emoji").value||"📝",
@@ -2083,13 +2101,23 @@ function apSavePost(id){
   }
   if(recOpen) renderRec();
   renderApPosts(document.getElementById("ap-body"));
-  alert((id?"Updated":"Published")+": "+title+" ✓");
+  showToast((id?"Updated":"Published")+": "+title+" ✓");
 }
 function apDeletePost(id){
   if(!confirm("Delete this post?")) return;
   POSTS = POSTS.filter(p=>p.id!==id);
   if(recOpen) renderRec();
   renderApPosts(document.getElementById("ap-body"));
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, duration=3000){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("on"), duration);
 }
 
 // ─── MOBILE FILTERS ───────────────────────────────────────────────────────────
@@ -2196,7 +2224,7 @@ window.addEventListener("load",()=>{
 // setAppTop must be global so toggleHero and toggleZip can call it
 function setAppTop(){
   // On mobile, CSS handles positioning with fixed top:112px — no JS needed
-  if(window.innerWidth <= 680) {
+  if(window.innerWidth <= 900) {
     if(map) map.invalidateSize();
     return;
   }
@@ -2221,7 +2249,7 @@ window.addEventListener("load",()=>{
   window.addEventListener("orientationchange", ()=>{ setTimeout(()=>{ setAppTop(); if(map) map.invalidateSize(); }, 300); });
 
   // Auto-show the About/intro popup on first visit on mobile
-  if(window.innerWidth <= 680 && !sessionStorage.getItem("lpdx_seen")){
+  if(window.innerWidth <= 900 && !sessionStorage.getItem("lpdx_seen")){
     sessionStorage.setItem("lpdx_seen","1");
     openMobileHero();
   }
