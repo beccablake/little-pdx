@@ -649,6 +649,45 @@ body::before{
 #emoji-picker{display:none;background:white;border:1.5px solid var(--border-m);border-radius:var(--rl);padding:12px;max-height:260px;overflow-y:auto;margin-bottom:12px;margin-top:6px}
 #emoji-picker.open{display:block !important}
 
+/* ─── MOBILE FILTER SHEET ────────────────────────────────────────── */
+#filter-sheet{
+  position:fixed;inset:0;z-index:1500;
+  background:rgba(26,43,26,0.5);backdrop-filter:blur(4px);
+  display:flex;align-items:flex-end;
+  opacity:0;visibility:hidden;transition:opacity 0.2s,visibility 0.2s;
+}
+#filter-sheet.open{opacity:1;visibility:visible}
+#filter-sheet-inner{
+  background:var(--sand);width:100%;
+  border-radius:24px 24px 0 0;
+  padding:14px 20px 48px;
+  max-height:80vh;overflow-y:auto;
+  transform:translateY(100%);
+  transition:transform 0.3s cubic-bezier(0.34,1.2,0.64,1);
+}
+#filter-sheet.open #filter-sheet-inner{transform:translateY(0)}
+.fsh-handle{width:36px;height:4px;background:var(--sand-dd);border-radius:99px;margin:0 auto 14px}
+.fsh-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:var(--navy);margin-bottom:14px}
+.fsh-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.fsh-done{
+  width:100%;padding:13px;background:var(--pine);color:white;
+  border:none;border-radius:99px;font-size:15px;font-weight:700;
+  cursor:pointer;font-family:'Nunito',sans-serif;
+}
+
+/* ─── MOBILE ACTION BAR ──────────────────────────────────────────── */
+#mobile-bar{display:none}
+.mob-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:7px 14px;border-radius:99px;
+  border:1.5px solid var(--border-m);background:var(--white);
+  color:var(--navy-m);font-size:13px;font-weight:600;
+  cursor:pointer;white-space:nowrap;font-family:'Nunito',sans-serif;
+  transition:all 0.15s;
+}
+.mob-btn.active{background:var(--navy);color:white;border-color:var(--navy)}
+.mob-btn.filtered{background:var(--orange);color:white;border-color:var(--orange)}
+
 /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
 @media(max-width:680px){
   #sidebar{display:none}
@@ -670,8 +709,19 @@ body::before{
     z-index:900;
   }
 
-  /* App: use padding-top instead of JS-calculated top
-     60px nav + 52px filterbar = 112px */
+  /* Hide desktop pills on mobile — replaced by mobile-bar */
+  #filterbar{display:none !important}
+  .fb-arrow{display:none !important}
+  .view-btns{display:none !important}
+
+  /* Show mobile action bar */
+  #mobile-bar{
+    display:flex;align-items:center;gap:8px;
+    padding:0 12px;height:52px;width:100%;
+  }
+  .mob-spacer{flex:1}
+
+  /* App: 60px nav + 52px filterbar = 112px */
   #app{
     position:fixed !important;
     top:112px !important;
@@ -684,12 +734,31 @@ body::before{
   #mapwrap{width:100%;flex:1;height:100%;min-height:0}
   #map{position:absolute;top:0;left:0;right:0;bottom:0}
 
-  /* Filter bar - smaller pills */
-  .pill{font-size:12px;padding:5px 11px}
-  .fb-arrow{width:26px}
+  /* Footer strip - single line, compact */
+  #footstrip{
+    font-size:12px;padding:7px 14px;
+    height:44px;
+  }
+  .fs-text{
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  }
 
-  /* Footer strip - compact */
-  #footstrip{font-size:12px;padding:7px 12px}
+  /* Drawer as bottom sheet on mobile */
+  #drawer{align-items:flex-end !important;padding:0 !important}
+  #drawer-inner{
+    border-radius:24px 24px 0 0 !important;
+    max-width:100% !important;
+    max-height:82vh !important;
+    transform:translateY(100%) !important;
+  }
+  #drawer.open #drawer-inner{transform:translateY(0) !important}
+  .dhandle{
+    display:block !important;
+    width:36px;height:4px;
+    background:var(--sand-dd);border-radius:99px;
+    margin:12px auto 0;
+  }
+  #dcontent{padding:14px 20px 48px}
 }
 </style>
 </head>
@@ -763,6 +832,13 @@ body::before{
 
 <!-- FILTER BAR -->
 <div id="filterbar-wrap">
+<!-- Mobile action bar: replaces scrolling pills on small screens -->
+<div id="mobile-bar">
+  <button class="mob-btn" id="mob-filter-btn" onclick="openMobileFilters()">🎛 Filters</button>
+  <div class="mob-spacer"></div>
+  <button class="mob-btn active" id="mob-map-btn" onclick="setView('map')">🗺 Map</button>
+  <button class="mob-btn" id="mob-list-btn" onclick="setView('grid')">📋 List</button>
+</div>
 <button class="fb-arrow fb-arrow-left" id="fb-left" onclick="scrollFilters(-1)">‹</button>
 <div id="filterbar">
   <button class="pill active" data-f="all"        onclick="toggleFilter('all',this)">🗺 All</button>
@@ -803,6 +879,7 @@ body::before{
   <span id="zip-status"></span>
   <button id="zip-close" onclick="toggleZip()">✕</button>
 </div>
+</div><!-- /filterbar-wrap -->
 
 <!-- MAIN APP -->
 <div id="app">
@@ -963,6 +1040,16 @@ body::before{
     </div>
   </div>
   <div class="rec-grid" id="rec-grid"></div>
+</div>
+
+<!-- MOBILE FILTER SHEET -->
+<div id="filter-sheet" onclick="if(event.target===this)closeMobileFilters()">
+  <div id="filter-sheet-inner">
+    <div class="fsh-handle"></div>
+    <div class="fsh-title">Filter places</div>
+    <div class="fsh-pills" id="fsh-pills"></div>
+    <button class="fsh-done" onclick="closeMobileFilters()">Show results →</button>
+  </div>
 </div>
 
 <!-- POST DETAIL OVERLAY -->
@@ -1307,6 +1394,10 @@ function setView(v){
   curView=v;
   document.getElementById("v-map").classList.toggle("active",v==="map");
   document.getElementById("v-grid").classList.toggle("active",v==="grid");
+  const mobMap=document.getElementById("mob-map-btn");
+  const mobList=document.getElementById("mob-list-btn");
+  if(mobMap) mobMap.classList.toggle("active",v==="map");
+  if(mobList) mobList.classList.toggle("active",v==="grid");
   const mapwrap=document.getElementById("mapwrap");
   const grid=document.getElementById("gridview");
   const sb=document.getElementById("sidebar");
@@ -1968,6 +2059,46 @@ function apDeletePost(id){
   POSTS = POSTS.filter(p=>p.id!==id);
   if(recOpen) renderRec();
   renderApPosts(document.getElementById("ap-body"));
+}
+
+// ─── MOBILE FILTERS ───────────────────────────────────────────────────────────
+const FILTER_DEFS = [
+  {f:"all",label:"🗺 All"},{f:"park",label:"🌲 Parks"},
+  {f:"destination",label:"🏆 Destination playgrounds"},{f:"splashpad",label:"💦 Splash pads"},
+  {f:"hiking",label:"🥾 Hiking"},{f:"swimming",label:"🏊 Swimming"},
+  {f:"animals",label:"🐾 Animals"},{f:"daytrip",label:"🚗 Day trip"},
+  {f:"biking",label:"🚲 Biking"},{f:"indoor",label:"🏠 Indoor play"},
+  {f:"books",label:"📚 Books"},{f:"bigkids",label:"🏃 Big kids"},
+  {f:"littlekids",label:"👶 Little kids"},{f:"food",label:"🍕 Eat"},
+  {f:"classes",label:"🎨 Classes"},{f:"store",label:"🛍 Stores"},
+  {f:"free",label:"🆓 Free"},{f:"misc",label:"✨ Misc"}
+];
+function openMobileFilters(){
+  const container = document.getElementById("fsh-pills");
+  container.innerHTML = FILTER_DEFS.map(d=>
+    `<button class="pill${activeFilters.has(d.f)?" active":""}" data-f="${d.f}" onclick="toggleFilter('${d.f}',this);syncMobileFilterSheet()">${d.label}</button>`
+  ).join("");
+  document.getElementById("filter-sheet").classList.add("open");
+}
+function syncMobileFilterSheet(){
+  // Keep pill states in sync while sheet is open
+  document.querySelectorAll("#fsh-pills .pill").forEach(b=>{
+    b.classList.toggle("active", activeFilters.has(b.dataset.f));
+  });
+  updateMobileFilterBtn();
+}
+function closeMobileFilters(){
+  document.getElementById("filter-sheet").classList.remove("open");
+  updateMobileFilterBtn();
+}
+function updateMobileFilterBtn(){
+  const btn = document.getElementById("mob-filter-btn");
+  if(!btn) return;
+  const filtered = !activeFilters.has("all");
+  btn.classList.toggle("filtered", filtered);
+  btn.textContent = filtered
+    ? `🎛 ${activeFilters.size} filter${activeFilters.size>1?"s":""}`
+    : "🎛 Filters";
 }
 
 // ─── MOBILE HERO ──────────────────────────────────────────────────────────────
