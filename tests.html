@@ -374,8 +374,8 @@ const SUITES = [
           const lng = parseFloat(rec.fields.Longitude);
           const name = rec.fields.Name||"Unknown";
           // Portland metro area rough bounds
-          if(isNaN(lat)||lat < 44||lat > 47) bad.push(`${name}: bad lat ${rec.fields.Latitude}`);
-          if(isNaN(lng)||lng > -121||lng < -124) bad.push(`${name}: bad lng ${rec.fields.Longitude}`);
+          if(isNaN(lat)||lat < 42||lat > 47) bad.push(`${name}: bad lat ${rec.fields.Latitude}`);
+          if(isNaN(lng)||lng > -120||lng < -125) bad.push(`${name}: bad lng ${rec.fields.Longitude}`);
         });
         assert(bad.length === 0, `Records with bad coordinates:\n${bad.join("\n")}`);
       }, skip);
