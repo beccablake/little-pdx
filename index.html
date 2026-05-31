@@ -676,11 +676,12 @@ body::before{
     position:fixed !important;
     top:112px !important;
     left:0;right:0;bottom:0 !important;
+    height:calc(100vh - 112px) !important;
     transition:none !important;
   }
 
   /* Map fills its container */
-  #mapwrap{width:100%;flex:1;min-height:0}
+  #mapwrap{width:100%;flex:1;height:100%;min-height:0}
   #map{position:absolute;top:0;left:0;right:0;bottom:0}
 
   /* Filter bar - smaller pills */
@@ -2056,6 +2057,12 @@ window.addEventListener("load",()=>{
   // iOS Safari address bar shows/hides on scroll — recalculate
   window.addEventListener("resize", ()=>{ setAppTop(); updateFilterArrows(); if(map) map.invalidateSize(); });
   window.addEventListener("orientationchange", ()=>{ setTimeout(()=>{ setAppTop(); if(map) map.invalidateSize(); }, 300); });
+
+  // Auto-show the About/intro popup on first visit on mobile
+  if(window.innerWidth <= 680 && !sessionStorage.getItem("lpdx_seen")){
+    sessionStorage.setItem("lpdx_seen","1");
+    openMobileHero();
+  }
 
   map=L.map("map",{center:[45.485,-122.800],zoom:12,zoomControl:true});
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
