@@ -1286,6 +1286,7 @@ function sorted(list){
 function starsHtml(r){return "★".repeat(Math.floor(r))+(r%1>=0.5?"½":"")}
 function tagHtml(t){return `<span class="tag tag-${t}">${TAG_LABELS[t]||t}</span>`}
 function pinColor(p){
+  if(p.featured) return "#D4A843";
   if(p.tags.includes("park")) return "#00897B";
   if(p.tags.includes("food")) return "#C0392B";
   if(p.tags.includes("classes")) return "#8E44AD";
@@ -1304,7 +1305,7 @@ function renderSidebar(){
       <div class="pthumb">${p.photoUrls&&p.photoUrls[0]?`<img src="${p.photoUrls[0]}" alt="${p.name}" loading="lazy">`:`<span style="font-size:28px">${p.emoji}</span>`}</div>
       <div class="pinfo">
         <div class="ptop">
-          <div class="pname">${p.name}</div>
+          <div class="pname">${p.featured?"🏅 ":""}${p.name}</div>
           ${p.featured?`<span class="feat-badge">✦</span>`:""}
         </div>
         <div class="ptags">${p.tags.map(tagHtml).join("")}</div>
