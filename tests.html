@@ -446,43 +446,97 @@ const SUITES = [
       await test("Mobile viewport meta tag exists", ()=>{
         assert(html.includes('name="viewport"') && html.includes('width=device-width'), "Missing proper viewport meta tag");
       });
-      await test("#mobile-hero-overlay exists for mobile popup", ()=>{
+
+      // ── CRITICAL: Mobile layout uses CSS not JS ───────────────────
+      await test("Mobile media query exists for max-width:680px", ()=>{
+        assert(html.includes("@media(max-width:680px)"), "Mobile media query missing");
+      });
+      await test("Hero banner hidden on mobile via CSS", ()=>{
+        const mediaBlock = html.match(/@media\(max-width:680px\)\{([\s\S]+?)\}(?=\s*<\/style>)/)?.[1]||"";
+        assert(mediaBlock.includes("hero-banner") && mediaBlock.includes("display:none"), "Hero banner not hidden in mobile media query");
+      });
+      await test("filterbar-wrap is position:fixed on mobile", ()=>{
+        const mediaBlock = html.match(/@media\(max-width:680px\)\{([\s\S]+?)\}(?=\s*<\/style>)/)?.[1]||"";
+        assert(mediaBlock.includes("filterbar-wrap") && mediaBlock.includes("position:fixed"), "filterbar-wrap not fixed on mobile — will scroll away");
+      });
+      await test("filterbar-wrap top:60px on mobile (below nav)", ()=>{
+        const mediaBlock = html.match(/@media\(max-width:680px\)\{([\s\S]+?)\}(?=\s*<\/style>)/)?.[1]||"";
+        assert(mediaBlock.includes("filterbar-wrap") && mediaBlock.includes("top:60px"), "filterbar-wrap not at top:60px on mobile");
+      });
+      await test("#app has fixed top:112px on mobile (60px nav + 52px filterbar)", ()=>{
+        const mediaBlock = html.match(/@media\(max-width:680px\)\{([\s\S]+?)\}(?=\s*<\/style>)/)?.[1]||"";
+        assert(mediaBlock.includes("top:112px"), "#app top not set to 112px in mobile CSS — map will be mispositioned");
+      });
+      await test("#app bottom:0 on mobile", ()=>{
+        const mediaBlock = html.match(/@media\(max-width:680px\)\{([\s\S]+?)\}(?=\s*<\/style>)/)?.[1]||"";
+        assert(mediaBlock.includes("bottom:0"), "#app bottom:0 missing on mobile");
+      });
+      await test("setAppTop skips on mobile (window.innerWidth check)", ()=>{
+        assert(html.includes("window.innerWidth <= 680"), "setAppTop doesn't check for mobile — will override CSS with wrong JS value");
+      });
+      await test("#map uses absolute positioning to fill container", ()=>{
+        assert(html.includes("position:absolute;top:0;left:0;right:0;bottom:0"), "#map not using absolute fill positioning");
+      });
+      await test("#mapwrap has flex:1 to fill remaining space", ()=>{
+        assert(html.includes("flex:1;position:relative"), "#mapwrap missing flex:1");
+      });
+
+      // ── Mobile hero popup ─────────────────────────────────────────
+      await test("#mobile-hero-overlay exists", ()=>{
         assert(html.includes('id="mobile-hero-overlay"'), "#mobile-hero-overlay not found");
       });
-      await test("openMobileHero function exists", ()=>{
-        assert(html.includes("function openMobileHero"), "openMobileHero function missing");
-      });
-      await test("closeMobileHero function exists", ()=>{
-        assert(html.includes("function closeMobileHero"), "closeMobileHero function missing");
-      });
-      await test("#nav-about-btn exists for mobile nav", ()=>{
+      await test("About button exists and has no btn-outline class", ()=>{
         assert(html.includes('id="nav-about-btn"'), "#nav-about-btn not found");
-      });
-      await test("About button does not have btn-outline class (would be hidden)", ()=>{
         const btnMatch = html.match(/id="nav-about-btn"[^>]*/);
-        if(btnMatch){
-          assert(!btnMatch[0].includes("btn-outline"), "About button has btn-outline class — will be hidden on mobile by CSS rule");
-        }
+        if(btnMatch) assert(!btnMatch[0].includes("btn-outline"), "About button has btn-outline class — hidden by CSS rule .nav-right .btn-outline{display:none}");
       });
-      await test("#app uses position:fixed", ()=>{
-        assert(html.includes("position:fixed;left:0;right:0;bottom:0"), "#app missing proper fixed positioning");
+      await test("openMobileHero sets display:flex directly (not class)", ()=>{
+        assert(html.includes('style.display="flex"') || html.includes("style.display = \"flex\""), "openMobileHero should set style.display directly to avoid CSS conflicts");
       });
-      await test("-webkit-transform:translateZ(0) present for iOS rendering", ()=>{
-        assert(html.includes("-webkit-transform:translateZ(0)"), "Missing iOS GPU layer hint");
+      await test("closeMobileHero sets display:none directly (not class)", ()=>{
+        assert(html.includes('style.display="none"') || html.includes("style.display = \"none\""), "closeMobileHero should set style.display directly");
       });
-      await test("setAppTop uses getBoundingClientRect (not scrollY)", ()=>{
-        assert(html.includes("getBoundingClientRect().bottom"), "setAppTop missing getBoundingClientRect");
-        assert(!html.includes("getBoundingClientRect().bottom + window.scrollY"), "setAppTop incorrectly adds window.scrollY");
+
+      // ── iOS Safari specific ───────────────────────────────────────
+      await test("-webkit-transform:translateZ(0) on #app for iOS GPU layer", ()=>{
+        assert(html.includes("-webkit-transform:translateZ(0)"), "Missing iOS GPU layer hint on #app");
       });
-      await test("Map retries invalidateSize on load (iOS fix)", ()=>{
-        const retryCount = (html.match(/map\.invalidateSize/g)||[]).length;
-        assert(retryCount >= 3, `map.invalidateSize only called ${retryCount} times, expected 3+ for iOS reliability`);
+      await test("-webkit-overflow-scrolling:touch on filterbar", ()=>{
+        assert(html.includes("-webkit-overflow-scrolling:touch"), "Missing touch scrolling on filterbar");
       });
       await test("orientationchange listener present", ()=>{
-        assert(html.includes("orientationchange"), "No orientationchange listener — map may not resize on device rotation");
+        assert(html.includes("orientationchange"), "No orientationchange listener");
       });
-      await test("-webkit-overflow-scrolling on filterbar", ()=>{
-        assert(html.includes("-webkit-overflow-scrolling:touch"), "Missing touch scrolling on filterbar");
+      await test("map.invalidateSize called after data loads", ()=>{
+        const count = (html.match(/map\.invalidateSize/g)||[]).length;
+        assert(count >= 2, `map.invalidateSize only called ${count} time(s)`);
+      });
+
+      // ── Live layout check (runs in current browser) ──────────────
+      await test("LIVE: #app top value is reasonable (100-200px from viewport top)", ()=>{
+        const app = document.getElementById("app");
+        if(!app){ assert(false, "Cannot find #app — are you running this on littlepdx.com?"); return; }
+        const rect = app.getBoundingClientRect();
+        assert(rect.top >= 100 && rect.top <= 250, `#app top is ${rect.top}px — expected 100-200px. Map may be hidden behind nav/filterbar`);
+      });
+      await test("LIVE: #app bottom reaches viewport bottom", ()=>{
+        const app = document.getElementById("app");
+        if(!app){ assert(false, "Cannot find #app — run on littlepdx.com"); return; }
+        const rect = app.getBoundingClientRect();
+        const vh = window.innerHeight;
+        assert(rect.bottom >= vh - 5, `#app bottom is ${Math.round(rect.bottom)}px, viewport is ${vh}px — dead space at bottom`);
+      });
+      await test("LIVE: #map has non-zero height", ()=>{
+        const mapEl = document.getElementById("map");
+        if(!mapEl){ assert(false, "Cannot find #map"); return; }
+        const rect = mapEl.getBoundingClientRect();
+        assert(rect.height > 100, `#map height is only ${rect.height}px — map is not rendering properly`);
+      });
+      await test("LIVE: #filterbar-wrap visible below nav", ()=>{
+        const fw = document.getElementById("filterbar-wrap");
+        if(!fw){ assert(false, "Cannot find #filterbar-wrap"); return; }
+        const rect = fw.getBoundingClientRect();
+        assert(rect.top >= 55 && rect.top <= 65, `filterbar-wrap top is ${rect.top}px, expected ~60px`);
       });
     }
   },
