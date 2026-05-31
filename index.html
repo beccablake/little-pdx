@@ -696,6 +696,7 @@ body::before{
   /* Nav */
   .nav-search{display:none}
   .nav-right .btn-outline{display:none}
+  .nav-right .btn-orange{display:none}
   #nav-about-btn{display:flex;font-size:12px;padding:6px 12px}
 
   /* Hero - completely hidden on mobile */
@@ -734,14 +735,34 @@ body::before{
   #mapwrap{width:100%;flex:1;height:100%;min-height:0}
   #map{position:absolute;top:0;left:0;right:0;bottom:0}
 
-  /* Footer strip - single line, compact */
+  /* Footer strip - two lines, label hidden */
   #footstrip{
-    font-size:12px;padding:7px 14px;
-    height:44px;
+    font-size:12px;padding:8px 14px;
+    height:auto;min-height:44px;
+    background:var(--sand-d);
+    border-top:1px solid var(--sand-dd);
   }
+  .fs-label{display:none}
   .fs-text{
-    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    white-space:normal;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;line-height:1.4;
+    color:var(--navy);font-size:12px;
   }
+  .fs-link{font-size:12px}
+  .fs-x{font-size:15px}
+
+  /* Mobile list view: sidebar uses fixed positioning so height is reliable */
+  #sidebar{
+    position:fixed !important;
+    top:112px !important;
+    left:0 !important; right:0 !important;
+    bottom:44px !important; /* sit above footstrip */
+    width:100% !important;
+    z-index:50;
+    overflow:hidden;
+  }
+  #place-list{padding-bottom:12px}
 
   /* Drawer as bottom sheet on mobile */
   #drawer{align-items:flex-end !important;padding:0 !important}
@@ -834,7 +855,7 @@ body::before{
 <div id="filterbar-wrap">
 <!-- Mobile action bar: replaces scrolling pills on small screens -->
 <div id="mobile-bar">
-  <button class="mob-btn" id="mob-filter-btn" onclick="openMobileFilters()">🎛 Filters</button>
+  <button class="mob-btn" id="mob-filter-btn" onclick="openMobileFilters()">✨ Filters</button>
   <div class="mob-spacer"></div>
   <button class="mob-btn active" id="mob-map-btn" onclick="setView('map')">🗺 Map</button>
   <button class="mob-btn" id="mob-list-btn" onclick="setView('grid')">📋 List</button>
@@ -1401,11 +1422,21 @@ function setView(v){
   const mapwrap=document.getElementById("mapwrap");
   const grid=document.getElementById("gridview");
   const sb=document.getElementById("sidebar");
+  const isMobile = window.innerWidth <= 680;
   if(v==="grid"){
-    mapwrap.style.display="none"; sb.style.display="none";
-    grid.classList.add("on"); renderGrid();
+    if(isMobile){
+      // On mobile: show sidebar card list (more native feel than grid)
+      mapwrap.style.display="none";
+      sb.style.display="flex";
+      grid.classList.remove("on");
+      renderSidebar();
+    } else {
+      mapwrap.style.display="none"; sb.style.display="none";
+      grid.classList.add("on"); renderGrid();
+    }
   } else {
-    mapwrap.style.display=""; sb.style.display="";
+    mapwrap.style.display="";
+    sb.style.display = isMobile ? "none" : "";
     grid.classList.remove("on");
     setTimeout(()=>map&&map.invalidateSize(),60);
   }
@@ -2097,8 +2128,8 @@ function updateMobileFilterBtn(){
   const filtered = !activeFilters.has("all");
   btn.classList.toggle("filtered", filtered);
   btn.textContent = filtered
-    ? `🎛 ${activeFilters.size} filter${activeFilters.size>1?"s":""}`
-    : "🎛 Filters";
+    ? `✨ ${activeFilters.size} filter${activeFilters.size>1?"s":""}`
+    : "✨ Filters";
 }
 
 // ─── MOBILE HERO ──────────────────────────────────────────────────────────────
