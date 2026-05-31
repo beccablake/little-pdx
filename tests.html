@@ -326,6 +326,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=3`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}).catch(()=>{}) ; throw new Error(`Airtable returned ${res.status}`); }
         const data = await res.json();
         assert(Array.isArray(data.records), "records is not an array");
       }, skip);
@@ -334,6 +335,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=5`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}).catch(()=>{}) ; throw new Error(`Airtable returned ${res.status}`); }
         const data = await res.json();
         assert(data.records.length > 0, "No records found in Airtable");
         const requiredFields = ["Name","Description","Tags","Emoji","Latitude","Longitude"];
@@ -348,6 +350,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const validTags = new Set(["Parks","Big kids","Little kids","Eat","Classes","Stores","Splash pads","Misc","Free","Destination playground","Hiking","Swimming","Animals","Day trip","Biking","Indoor play","Books"]);
         const badTags = new Set();
@@ -363,6 +366,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const bad = [];
         data.records.forEach(rec=>{
@@ -380,6 +384,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const unnamed = data.records.filter(r=>!r.fields.Name||r.fields.Name.trim()==="");
         assert(unnamed.length === 0, `${unnamed.length} records are missing a Name`);
@@ -389,6 +394,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const nodesc = data.records.filter(r=>!r.fields.Description||r.fields.Description.trim()==="");
         assert(nodesc.length === 0, `Records missing Description: ${nodesc.map(r=>r.fields.Name).join(", ")}`);
@@ -398,6 +404,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const notags = data.records.filter(r=>!r.fields.Tags||r.fields.Tags.length===0);
         assert(notags.length === 0, `Records missing Tags: ${notags.map(r=>r.fields.Name).join(", ")}`);
@@ -407,6 +414,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const badPhotos = [];
         data.records.forEach(rec=>{
@@ -524,6 +532,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         assert(data.records.length >= 10, `Only ${data.records.length} listings — need at least 10`);
       }, skip);
@@ -532,6 +541,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const names = data.records.map(r=>r.fields.Name?.toLowerCase().trim()).filter(Boolean);
         const dupes = names.filter((n,i)=>names.indexOf(n)!==i);
@@ -542,6 +552,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const tagCounts = {};
         data.records.forEach(rec=>{
@@ -554,6 +565,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const short = data.records.filter(r=>(r.fields.Description||"").length < 20);
         assert(short.length === 0, `Listings with too-short descriptions: ${short.map(r=>r.fields.Name).join(", ")}`);
@@ -563,6 +575,7 @@ const SUITES = [
         const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE)}?maxRecords=100`, {
           headers:{Authorization:`Bearer ${token}`}
         });
+        if(!res.ok){ const err = await res.json().catch(()=>{}); throw new Error(`Airtable returned ${res.status}: ${JSON.stringify(err?.error||err||'unknown')}`); }
         const data = await res.json();
         const zero = data.records.filter(r=>!r.fields.Latitude||!r.fields.Longitude||r.fields.Latitude===0||r.fields.Longitude===0);
         assert(zero.length === 0, `Records with zero/missing coordinates: ${zero.map(r=>r.fields.Name).join(", ")}`);
