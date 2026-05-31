@@ -254,8 +254,25 @@ body::before{
 #place-list::-webkit-scrollbar-thumb{background:var(--sand-dd);border-radius:99px}
 
 /* Sponsored card in sidebar */
-.sb-sponsor{
-  margin:10px 12px;padding:12px 14px;
+/* Sponsor rotator */
+#sb-sponsor-wrap{margin:10px 12px}
+#sb-sponsor-slide .sb-sponsor{margin:0}
+.sp-controls{
+  display:flex;align-items:center;justify-content:center;
+  gap:8px;padding:6px 0 2px;
+}
+.sp-arrow{
+  background:none;border:1.5px solid var(--border-m);border-radius:50%;
+  width:22px;height:22px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:13px;color:var(--navy-m);line-height:1;
+  transition:all 0.15s;padding:0;
+}
+.sp-arrow:hover{background:var(--sand-d);color:var(--navy)}
+.sp-dots{display:flex;align-items:center;gap:4px}
+.sp-dot{width:6px;height:6px;border-radius:50%;background:var(--sand-dd);transition:background 0.2s}
+.sp-dot.on{background:var(--navy-m)}
+
+.sb-sponsor{  margin:10px 12px;padding:12px 14px;
   background:var(--yellow-p);border:1.5px solid rgba(255,209,102,0.5);
   border-radius:var(--rl);cursor:pointer;transition:border-color 0.15s;
 }
@@ -931,12 +948,14 @@ body::before{
         <option value="featured">Featured first</option>
       </select>
     </div>
-    <!-- Sponsored slot — swap content for real partner -->
-    <div class="sb-sponsor" onclick="openModal('sponsor-modal')">
-      <div class="sp-eyebrow">✦ Featured Partner</div>
-      <h4>Your business here</h4>
-      <p>Reach local families actively searching for activities and places to eat.</p>
-      <span class="sb-sponsor-cta">Learn about featured listings →</span>
+    <!-- Featured partner rotator -->
+    <div id="sb-sponsor-wrap">
+      <div id="sb-sponsor-slide"></div>
+      <div class="sp-controls" id="sp-controls" style="display:none">
+        <button class="sp-arrow" onclick="prevSponsor()">‹</button>
+        <div class="sp-dots" id="sp-dots"></div>
+        <button class="sp-arrow" onclick="nextSponsor()">›</button>
+      </div>
     </div>
     <div id="place-list"></div>
   </div>
@@ -1064,6 +1083,7 @@ body::before{
       <button class="ap-tab" onclick="apTab('posts',this)">Posts</button>
       <button class="ap-tab" onclick="apTab('sponsors',this)">Sponsors</button>
       <button class="ap-tab" onclick="apTab('suggestions',this)">Suggestions</button>
+      <button class="ap-tab" onclick="apTab('inquiries',this)">Inquiries</button>
       <button class="ap-tab" onclick="apTab('stats',this)">Stats</button>
     </div>
     <div class="ap-body" id="ap-body"></div>
@@ -1157,6 +1177,7 @@ async function fetchFromAirtable(){
     PLACES = allRecords.filter(r=>r.fields.Name).map(recordToPlace);
     clearMapMessage();
     renderAll();
+    initSponsorRotation();
     // iOS Safari fix: force map to recalculate its size after data loads
     setTimeout(()=>{ if(map) map.invalidateSize(); }, 200);
   } catch(e){
@@ -1295,6 +1316,74 @@ function pinColor(p){
 }
 
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+// ─── FEATURED PARTNER ROTATOR ─────────────────────────────────────────────────
+let sponsorSlides=[], sponsorIdx=0, sponsorTimer=null;
+
+function buildSponsorSlides(){
+  const featured=PLACES.filter(p=>p.featured);
+  sponsorSlides=[
+    ...featured.map(p=>({type:"listing",place:p})),
+    {type:"placeholder"}
+  ];
+}
+
+function renderSponsorSlide(){
+  const slideEl=document.getElementById("sb-sponsor-slide");
+  const controlsEl=document.getElementById("sp-controls");
+  const dotsEl=document.getElementById("sp-dots");
+  if(!slideEl) return;
+  buildSponsorSlides();
+  const total=sponsorSlides.length;
+  const idx=((sponsorIdx%total)+total)%total;
+  const slide=sponsorSlides[idx];
+  if(slide.type==="listing"){
+    const p=slide.place;
+    slideEl.innerHTML=`
+      <div class="sb-sponsor" onclick="selectPlace('${p.id}')">
+        <div class="sp-eyebrow">✦ Featured Partner</div>
+        <h4>${p.emoji} ${p.name}</h4>
+        <p>${p.desc.length>90?p.desc.substring(0,90)+"…":p.desc}</p>
+        <span class="sb-sponsor-cta">View listing →</span>
+      </div>`;
+  } else {
+    slideEl.innerHTML=`
+      <div class="sb-sponsor" onclick="openModal('advertise-modal')">
+        <div class="sp-eyebrow">✦ Featured Partner</div>
+        <h4>Your business here</h4>
+        <p>Reach local families actively searching for activities and places to eat.</p>
+        <span class="sb-sponsor-cta">Learn about featured listings →</span>
+      </div>`;
+  }
+  // Show controls + dots only if more than 1 slide
+  if(controlsEl) controlsEl.style.display=total>1?"flex":"none";
+  if(dotsEl && total>1){
+    dotsEl.innerHTML=sponsorSlides.map((_,i)=>
+      `<div class="sp-dot${i===idx?" on":""}"></div>`
+    ).join("");
+  }
+}
+
+function nextSponsor(){
+  sponsorIdx=(sponsorIdx+1)%sponsorSlides.length;
+  renderSponsorSlide();
+  resetSponsorTimer();
+}
+function prevSponsor(){
+  sponsorIdx=(sponsorIdx-1+sponsorSlides.length)%sponsorSlides.length;
+  renderSponsorSlide();
+  resetSponsorTimer();
+}
+function resetSponsorTimer(){
+  if(sponsorTimer) clearInterval(sponsorTimer);
+  if(sponsorSlides.length>1) sponsorTimer=setInterval(nextSponsor,5000);
+}
+function initSponsorRotation(){
+  buildSponsorSlides();
+  sponsorIdx=0;
+  renderSponsorSlide();
+  resetSponsorTimer();
+}
+
 function renderSidebar(){
   const vis=sorted(PLACES.filter(matches));
   document.getElementById("sb-count").textContent=vis.length+" place"+(vis.length!==1?"s":"")+" nearby";
@@ -1514,25 +1603,45 @@ function goZip(){
 document.getElementById("zip-input").addEventListener("keydown",e=>{if(e.key==="Enter") goZip();});
 
 // ─── FOOTER STRIP ─────────────────────────────────────────────────────────────
-const HOUSE_MESSAGES = [
-  {text:"✦ Founding partner rate — be one of the first 3 businesses featured on Little PDX for just $49/month, locked in for up to 12 months.", cta:"Learn more →", action:"openModal('advertise-modal')"},
-  {text:"🏡 Is your favorite local spot missing from the map? We'd love your first-hand recommendation.", cta:"Suggest a place →", action:"openSuggestNew()"},
-  {text:"📍 Want to reach local families actively searching for things to do? Get your business in front of the right people.", cta:"See how it works →", action:"openModal('advertise-modal')"}
-];
+let FOOTER_ADS = [];
 let fsIdx=0;
+
+async function fetchFooterAds(){
+  try{
+    const res=await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Footer%20Advertisements?filterByFormula={Status}='Active'`,{
+      headers:{Authorization:`Bearer ${AIRTABLE_READ_TOKEN}`}
+    });
+    if(res.ok){
+      const data=await res.json();
+      FOOTER_ADS=(data.records||[]).map(r=>({
+        id:r.id,
+        name:r.fields["Business name"]||"",
+        text:r.fields["Footer message"]||"",
+        cta:r.fields["CTA text"]||"Learn more →",
+        action:r.fields["CTA action"]||"",
+        status:r.fields["Status"]||"Active"
+      }));
+    }
+  } catch(e){ console.warn("Could not load footer ads:",e); }
+}
+
 function rotateFoot(){
-  const activeSponsors=SPONSORS.filter(s=>s.status==="active");
-  const messages = activeSponsors.length
-    ? activeSponsors.map(s=>({text:s.msg, cta:"Learn more →", action:"openModal('advertise-modal')"}))
-    : HOUSE_MESSAGES;
-  const msg = messages[fsIdx % messages.length];
-  document.getElementById("fs-text").textContent = msg.text;
-  const link = document.getElementById("fs-link");
-  if(link){ link.textContent = msg.cta; link.setAttribute("onclick", msg.action); }
+  if(!FOOTER_ADS.length) return;
+  const msg=FOOTER_ADS[fsIdx % FOOTER_ADS.length];
+  document.getElementById("fs-text").textContent=msg.text;
+  const link=document.getElementById("fs-link");
+  if(link){
+    link.textContent=msg.cta;
+    link.onclick=()=>{
+      if(msg.action==="advertise") openModal("advertise-modal");
+      else if(msg.action==="suggest") openSuggestNew();
+      else if(msg.action) window.open(msg.action,"_blank");
+    };
+  }
   fsIdx++;
 }
 function dismissFoot(){document.getElementById("footstrip").classList.add("gone");}
-rotateFoot(); setInterval(rotateFoot,7000);
+fetchFooterAds().then(()=>{ rotateFoot(); setInterval(rotateFoot,7000); });
 
 // ─── MODALS ───────────────────────────────────────────────────────────────────
 function openModal(id){document.getElementById(id).classList.add("on");}
@@ -1699,6 +1808,7 @@ function apTab(tab,btn){
   else if(tab==="posts") renderApPosts(body);
   else if(tab==="sponsors") renderApSponsors(body);
   else if(tab==="suggestions") renderApSuggestions(body);
+  else if(tab==="inquiries") renderApInquiries(body);
   else if(tab==="stats") renderApStats(body);
 }
 
@@ -1899,56 +2009,94 @@ async function apToggleFeatured(id){
   }
 }
 
-function renderApSponsors(body){
+async function renderApSponsors(body){
+  body.innerHTML=`<div style="font-size:13px;color:var(--navy-m);padding:20px">Loading footer ads…</div>`;
+  let ads=[];
+  try{
+    const res=await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Footer%20Advertisements?sort[0][field]=Start%20date&sort[0][direction]=desc`,{
+      headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`}
+    });
+    if(res.ok){
+      const data=await res.json();
+      ads=(data.records||[]).map(r=>({
+        id:r.id,
+        name:r.fields["Business name"]||"",
+        text:r.fields["Footer message"]||"",
+        cta:r.fields["CTA text"]||"",
+        action:r.fields["CTA action"]||"",
+        status:r.fields["Status"]||"Active",
+        date:r.fields["Start date"]||""
+      }));
+    }
+  } catch(e){ console.warn("Could not load footer ads:",e); }
+
   body.innerHTML=`
     <div style="font-size:13px;color:var(--navy-m);margin-bottom:14px;line-height:1.6">
-      Featured sponsors get a gold badge, priority placement, and their message in the rotating footer strip.<br>
-      <strong>Rate: $49/month</strong> per listing.
+      These messages rotate in the footer strip. Pause any message to remove it from rotation. Add new records directly in Airtable.
     </div>
-    ${SPONSORS.map(s=>`
+    ${ads.length?ads.map(ad=>`
       <div class="sp-row">
         <div class="sp-row-content">
-          <div class="sp-row-name">${s.name}</div>
-          <div class="sp-row-meta">${s.email} · ${s.msg}</div>
+          <div class="sp-row-name">${ad.name}</div>
+          <div class="sp-row-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px">${ad.text}</div>
         </div>
-        <span class="sp-status ${s.status==="active"?"sp-active":"sp-pending"}">${s.status}</span>
-        <button class="ap-btn" onclick="apToggleSponsors(${s.id})">${s.status==="active"?"Pause":"Activate"}</button>
-        <button class="ap-btn danger" onclick="apDeleteSponsor(${s.id})">Remove</button>
-      </div>`).join("")}
-    <div class="ap-form" style="margin-top:16px">
-      <h4>Add sponsor manually</h4>
-      <div class="fg"><label>Business name</label><input id="sp-an" type="text" placeholder="Business name"></div>
-      <div class="fg"><label>Email</label><input id="sp-ae" type="email" placeholder="contact@business.com"></div>
-      <div class="fg"><label>Footer message</label><input id="sp-am" type="text" placeholder="Message shown in the footer strip"></div>
-      <button class="ap-btn primary" onclick="apAddSponsor()" style="margin-top:4px">Add sponsor</button>
-    </div>`;
-}
-function apToggleSponsors(id){
-  const s=SPONSORS.find(x=>x.id===id);
-  if(s){s.status=s.status==="active"?"paused":"active";rotateFoot();renderApSponsors(document.getElementById("ap-body"));}
-}
-function apDeleteSponsor(id){
-  if(!confirm("Remove this sponsor?")) return;
-  SPONSORS=SPONSORS.filter(s=>s.id!==id);
-  renderApSponsors(document.getElementById("ap-body"));
-}
-function apAddSponsor(){
-  const name=document.getElementById("sp-an").value.trim();
-  if(!name){showToast("Enter a business name.");return;}
-  SPONSORS.push({id:Date.now(),name,email:document.getElementById("sp-ae").value,status:"active",msg:document.getElementById("sp-am").value||name+" — featured on Little PDX!"});
-  renderApSponsors(document.getElementById("ap-body"));
+        <span class="sp-status ${ad.status==="Active"?"sp-active":"sp-pending"}">${ad.status}</span>
+        <button class="ap-btn" onclick="apToggleFooterAd('${ad.id}','${ad.status==="Active"?"Paused":"Active"}',this)">${ad.status==="Active"?"Pause":"Activate"}</button>
+      </div>`).join(""):`<div class="noresults"><div class="noresults-em">📭</div><h4>No footer ads found</h4><p>Add records in your Airtable Footer Advertisements table.</p></div>`}`;
 }
 
-function renderApSuggestions(body){
-  const corrections = SUGGESTIONS.filter(s=>s.type==="correction");
-  const newListings = SUGGESTIONS.filter(s=>s.type!=="correction");
+async function apToggleFooterAd(id, newStatus, btn){
+  if(btn) btn.textContent="Saving…";
+  try{
+    await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Footer%20Advertisements/${id}`,{
+      method:"PATCH",
+      headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`,"Content-Type":"application/json"},
+      body:JSON.stringify({fields:{"Status":newStatus}})
+    });
+    await fetchFooterAds();
+    rotateFoot();
+    renderApSponsors(document.getElementById("ap-body"));
+  } catch(e){
+    showToast("Couldn't update — try again.");
+    if(btn) btn.textContent=newStatus==="Paused"?"Pause":"Activate";
+  }
+}
+
+async function renderApSuggestions(body){
+  body.innerHTML=`<div style="font-size:13px;color:var(--navy-m);padding:20px">Loading suggestions…</div>`;
+  let suggestions=[];
+  try{
+    const res=await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Suggestions?sort[0][field]=Submitted%20date&sort[0][direction]=desc`,{
+      headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`}
+    });
+    if(res.ok){
+      const data=await res.json();
+      suggestions=(data.records||[]).map(r=>({
+        id:r.id,
+        name:r.fields["Name"]||"",
+        type:r.fields["Type"]||"new",
+        cat:r.fields["Category"]||"",
+        age:r.fields["Best for"]||"",
+        addr:r.fields["Address"]||"",
+        why:r.fields["Why they love it"]||"",
+        submitter:r.fields["Submitter name"]||"",
+        email:r.fields["Submitter email"]||"",
+        status:r.fields["Status"]||"Pending",
+        date:r.fields["Submitted date"]||""
+      }));
+    }
+  } catch(e){ console.warn("Could not load suggestions:",e); }
+
+  const pending=suggestions.filter(s=>s.status==="Pending");
+  const corrections=pending.filter(s=>s.type==="correction");
+  const newListings=pending.filter(s=>s.type!=="correction");
+
   body.innerHTML=`
     <div style="font-size:13px;color:var(--navy-m);margin-bottom:14px">
-      ${SUGGESTIONS.length} pending · ${corrections.length} correction${corrections.length!==1?"s":""} · ${newListings.length} new suggestion${newListings.length!==1?"s":""}
+      ${pending.length} pending · ${corrections.length} correction${corrections.length!==1?"s":""} · ${newListings.length} new suggestion${newListings.length!==1?"s":""}
     </div>
-    ${SUGGESTIONS.length?SUGGESTIONS.map(s=>{
-      const isCorrection = s.type==="correction";
-      const linkedPlace = s.linkedId ? PLACES.find(p=>p.id===s.linkedId) : null;
+    ${pending.length?pending.map(s=>{
+      const isCorrection=s.type==="correction";
       return `
       <div class="sug-row" style="${isCorrection?"border-left:3px solid var(--orange);padding-left:11px":""}">
         <div class="sug-row-top">
@@ -1956,18 +2104,16 @@ function renderApSuggestions(body){
             ${isCorrection?`<span style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--orange);margin-right:6px">✏️ Correction</span>`:`<span style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--teal);margin-right:6px">🌲 New place</span>`}
             ${s.name}
           </div>
-          <span style="font-size:11px;color:var(--navy-l)">${isCorrection?(linkedPlace?`Re: ${linkedPlace.name}`:"Linked listing"):`${s.cat||""} · ${s.age||""}`}</span>
+          <span style="font-size:11px;color:var(--navy-l)">${s.date} · ${s.cat||""} ${s.age?`· ${s.age}`:""}</span>
         </div>
         <div class="sug-row-body">${s.why||"No description provided."}</div>
-        ${s.submitter?`<div style="font-size:11px;color:var(--navy-l);margin-top:4px">From: ${s.submitter}${s.email?" · "+s.email:""}</div>`:""}
+        ${s.addr?`<div style="font-size:11px;color:var(--navy-l);margin-top:2px">📍 ${s.addr}</div>`:""}
+        ${s.submitter||s.email?`<div style="font-size:11px;color:var(--navy-l);margin-top:4px">From: ${s.submitter||""}${s.email?" · "+s.email:""}</div>`:""}
         <div class="sug-row-actions">
-          ${isCorrection
-            ?`<button class="ap-btn primary" onclick="apEditPlace('${s.linkedId||""}')">Edit listing →</button>`
-            :`<button class="ap-btn primary" onclick="apApproveSuggestion(${s.id})">✓ Add to map</button>`}
-          <button class="ap-btn danger" onclick="apDismissSuggestion(${s.id})">Dismiss</button>
+          <button class="ap-btn danger" onclick="apDismissSuggestion('${s.id}',this)">Mark reviewed</button>
         </div>
       </div>`;
-    }).join(""):`<div class="noresults"><div class="noresults-em">✅</div><h4>All caught up!</h4><p>No pending suggestions or corrections.</p></div>`}`;
+    }).join(""):`<div class="noresults"><div class="noresults-em">✅</div><h4>All caught up!</h4><p>No pending suggestions.</p></div>`}`;
 }
 function apApproveSuggestion(id){
   const s=SUGGESTIONS.find(x=>x.id===id);
@@ -1976,9 +2122,77 @@ function apApproveSuggestion(id){
   showToast(`"${s.name}" approved! Go to Add New to enter its full details and add it to the map.`);
   renderApSuggestions(document.getElementById("ap-body"));
 }
-function apDismissSuggestion(id){
-  SUGGESTIONS=SUGGESTIONS.filter(s=>s.id!==id);
-  renderApSuggestions(document.getElementById("ap-body"));
+async function apDismissSuggestion(airtableId, btn){
+  if(btn) btn.textContent="Saving…";
+  try{
+    await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Suggestions/${airtableId}`,{
+      method:"PATCH",
+      headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`,"Content-Type":"application/json"},
+      body:JSON.stringify({fields:{"Status":"Dismissed"}})
+    });
+    renderApSuggestions(document.getElementById("ap-body"));
+  } catch(e){
+    showToast("Couldn't update — try again.");
+    if(btn) btn.textContent="Mark reviewed";
+  }
+}
+
+async function renderApInquiries(body){
+  body.innerHTML=`<div style="font-size:13px;color:var(--navy-m);padding:20px">Loading inquiries…</div>`;
+  let inquiries=[];
+  try{
+    const res=await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Advertising%20Inquiries?sort[0][field]=Submitted%20date&sort[0][direction]=desc`,{
+      headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`}
+    });
+    if(res.ok){
+      const data=await res.json();
+      inquiries=(data.records||[]).map(r=>({
+        id:r.id,
+        name:r.fields["Business name"]||"",
+        email:r.fields["Contact email"]||"",
+        website:r.fields["Website"]||"",
+        desc:r.fields["About their business"]||"",
+        status:r.fields["Status"]||"New",
+        date:r.fields["Submitted date"]||""
+      }));
+    }
+  } catch(e){ console.warn("Could not load inquiries:",e); }
+
+  const active=inquiries.filter(i=>i.status!=="Declined");
+  body.innerHTML=`
+    <div style="font-size:13px;color:var(--navy-m);margin-bottom:14px">
+      ${inquiries.length} total · ${active.length} active
+    </div>
+    ${inquiries.length?inquiries.map(i=>`
+      <div class="sug-row">
+        <div class="sug-row-top">
+          <div class="sug-row-name" style="font-weight:700;color:var(--navy)">${i.name}</div>
+          <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:${i.status==='New'?'var(--teal-p)':i.status==='Contacted'?'var(--yellow-p)':i.status==='Active'?'#D5F5E3':'var(--sand-d)'};color:${i.status==='Active'?'#1E8449':'var(--navy-m)'}">${i.status}</span>
+        </div>
+        <div style="font-size:12px;color:var(--navy-m);margin:4px 0">${i.email}${i.website?` · <a href="${i.website}" target="_blank" style="color:var(--teal)">${i.website}</a>`:""}</div>
+        ${i.desc?`<div class="sug-row-body">${i.desc}</div>`:""}
+        <div style="font-size:11px;color:var(--navy-l);margin-top:4px">Submitted: ${i.date}</div>
+        <div class="sug-row-actions">
+          <button class="ap-btn" onclick="apUpdateInquiry('${i.id}','Contacted',this)">Contacted</button>
+          <button class="ap-btn primary" onclick="apUpdateInquiry('${i.id}','Active',this)">Mark active</button>
+          <button class="ap-btn danger" onclick="apUpdateInquiry('${i.id}','Declined',this)">Decline</button>
+        </div>
+      </div>`).join(""):`<div class="noresults"><div class="noresults-em">📭</div><h4>No inquiries yet</h4><p>Advertising inquiries will appear here.</p></div>`}`;
+}
+
+async function apUpdateInquiry(airtableId, status, btn){
+  if(btn) btn.textContent="Saving…";
+  try{
+    await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Advertising%20Inquiries/${airtableId}`,{
+      method:"PATCH",
+      headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`,"Content-Type":"application/json"},
+      body:JSON.stringify({fields:{"Status":status}})
+    });
+    renderApInquiries(document.getElementById("ap-body"));
+  } catch(e){
+    showToast("Couldn't update — try again.");
+    if(btn) btn.textContent=status;
+  }
 }
 
 function renderApStats(body){
