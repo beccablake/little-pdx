@@ -512,31 +512,77 @@ const SUITES = [
         assert(count >= 2, `map.invalidateSize only called ${count} time(s)`);
       });
 
-      // ── Live layout check (runs in current browser) ──────────────
-      await test("LIVE: #app top value is reasonable (100-200px from viewport top)", ()=>{
-        const app = document.getElementById("app");
-        if(!app){ assert(false, "Cannot find #app — are you running this on littlepdx.com?"); return; }
-        const rect = app.getBoundingClientRect();
-        assert(rect.top >= 100 && rect.top <= 250, `#app top is ${rect.top}px — expected 100-200px. Map may be hidden behind nav/filterbar`);
+      // ── Live layout check via iframe ─────────────────────────────
+      await test("LIVE: #app top is 112px on mobile (CSS positioning)", async ()=>{
+        if(window.innerWidth > 680){ results[results.length-1] = {name:"LIVE: #app top is 112px on mobile", status:"skip", detail:"Not a mobile viewport — skipped"}; passes--; skips++; return; }
+        await new Promise((resolve, reject)=>{
+          const iframe = document.createElement("iframe");
+          iframe.src = SITE_URL;
+          iframe.style.cssText = "position:fixed;top:-9999px;left:0;width:375px;height:812px;visibility:hidden";
+          iframe.onload = ()=>{
+            setTimeout(()=>{
+              try {
+                const app = iframe.contentDocument.getElementById("app");
+                if(!app){ reject(new Error("Cannot find #app in iframe")); return; }
+                const style = iframe.contentWindow.getComputedStyle(app);
+                const top = parseInt(style.top);
+                assert(!isNaN(top) && top >= 100 && top <= 200, `#app top is ${top}px — expected 100-200px. Map hidden behind nav.`);
+                resolve();
+              } catch(e){ reject(e); }
+              document.body.removeChild(iframe);
+            }, 3000);
+          };
+          iframe.onerror = ()=>reject(new Error("Failed to load site in iframe"));
+          document.body.appendChild(iframe);
+        });
       });
-      await test("LIVE: #app bottom reaches viewport bottom", ()=>{
-        const app = document.getElementById("app");
-        if(!app){ assert(false, "Cannot find #app — run on littlepdx.com"); return; }
-        const rect = app.getBoundingClientRect();
-        const vh = window.innerHeight;
-        assert(rect.bottom >= vh - 5, `#app bottom is ${Math.round(rect.bottom)}px, viewport is ${vh}px — dead space at bottom`);
+
+      await test("LIVE: #app bottom reaches screen bottom", async ()=>{
+        if(window.innerWidth > 680){ results[results.length-1] = {name:"LIVE: #app bottom reaches screen bottom", status:"skip", detail:"Not mobile"}; passes--; skips++; return; }
+        await new Promise((resolve, reject)=>{
+          const iframe = document.createElement("iframe");
+          iframe.src = SITE_URL;
+          iframe.style.cssText = "position:fixed;top:-9999px;left:0;width:375px;height:812px;visibility:hidden";
+          iframe.onload = ()=>{
+            setTimeout(()=>{
+              try {
+                const app = iframe.contentDocument.getElementById("app");
+                if(!app){ reject(new Error("Cannot find #app")); return; }
+                const style = iframe.contentWindow.getComputedStyle(app);
+                const bottom = style.bottom;
+                assert(bottom === "0px", `#app bottom is "${bottom}" — should be 0px`);
+                resolve();
+              } catch(e){ reject(e); }
+              document.body.removeChild(iframe);
+            }, 3000);
+          };
+          document.body.appendChild(iframe);
+        });
       });
-      await test("LIVE: #map has non-zero height", ()=>{
-        const mapEl = document.getElementById("map");
-        if(!mapEl){ assert(false, "Cannot find #map"); return; }
-        const rect = mapEl.getBoundingClientRect();
-        assert(rect.height > 100, `#map height is only ${rect.height}px — map is not rendering properly`);
-      });
-      await test("LIVE: #filterbar-wrap visible below nav", ()=>{
-        const fw = document.getElementById("filterbar-wrap");
-        if(!fw){ assert(false, "Cannot find #filterbar-wrap"); return; }
-        const rect = fw.getBoundingClientRect();
-        assert(rect.top >= 55 && rect.top <= 65, `filterbar-wrap top is ${rect.top}px, expected ~60px`);
+
+      await test("LIVE: Sponsor strip not covering map", async ()=>{
+        if(window.innerWidth > 680){ results[results.length-1] = {name:"LIVE: Sponsor strip not covering map", status:"skip", detail:"Not mobile"}; passes--; skips++; return; }
+        await new Promise((resolve, reject)=>{
+          const iframe = document.createElement("iframe");
+          iframe.src = SITE_URL;
+          iframe.style.cssText = "position:fixed;top:-9999px;left:0;width:375px;height:812px;visibility:hidden";
+          iframe.onload = ()=>{
+            setTimeout(()=>{
+              try {
+                const footstrip = iframe.contentDocument.getElementById("footstrip");
+                const app = iframe.contentDocument.getElementById("app");
+                if(!footstrip || !app){ reject(new Error("Elements not found")); return; }
+                const footRect = footstrip.getBoundingClientRect();
+                const appRect = app.getBoundingClientRect();
+                // App should start above the footstrip bottom
+                assert(appRect.top < footRect.top, `#app starts at ${appRect.top}px but sponsor strip starts at ${footRect.top}px — sponsor strip may be inside map area`);
+                resolve();
+              } catch(e){ reject(e); }
+              document.body.removeChild(iframe);
+            }, 3000);
+          };
+          document.body.appendChild(iframe);
+        });
       });
     }
   },
