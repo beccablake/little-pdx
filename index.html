@@ -328,6 +328,9 @@ body::before{
 .tag-indoor     {background:#F0E8FF;         color:#5A00A0;border-color:rgba(90,0,160,0.2)}
 .tag-books      {background:#FFF5E0;         color:#7A4500;border-color:rgba(122,69,0,0.2)}
 .tag-misc      {background:#F5F5F0;         color:#555548;border-color:rgba(85,85,72,0.2)}
+.tag-summer    {background:#FFF8E0;         color:#7A5C00;border-color:rgba(212,168,67,0.3)}
+.tag-fall      {background:#FFF0E8;         color:#8A3500;border-color:rgba(200,80,20,0.2)}
+.tag-winter    {background:#E8F4FF;         color:#1A5C8A;border-color:rgba(26,92,138,0.2)}
 .tag-free      {background:#EDFFF5;         color:#0A6B3A;border-color:rgba(10,107,58,0.2)}
 
 /* ─── MAP ───────────────────────────────────────────────────────── */
@@ -921,6 +924,9 @@ body::before{
   <button class="pill"        data-f="store"       onclick="toggleFilter('store',this)">🛍 Stores</button>
   <button class="pill"        data-f="free"        onclick="toggleFilter('free',this)">🆓 Free</button>
   <button class="pill"        data-f="misc"        onclick="toggleFilter('misc',this)">✨ Misc</button>
+  <button class="pill"        data-f="summer"      onclick="toggleFilter('summer',this)">☀️ Summer Seasonal</button>
+  <button class="pill"        data-f="fall"        onclick="toggleFilter('fall',this)">🍂 Fall Seasonal</button>
+  <button class="pill"        data-f="winter"      onclick="toggleFilter('winter',this)">⛄ Winter Seasonal</button>
   <div class="pill-sep"></div>
   <div style="flex-shrink:0;width:8px"></div>
   <div class="view-btns">
@@ -1144,7 +1150,7 @@ let AIRTABLE_TOKEN = AIRTABLE_READ_TOKEN; // Write access upgraded when admin lo
 function recordToPlace(rec){
   const f = rec.fields;
   // Map Airtable tag labels back to internal keys
-  const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc","Destination playground":"destination","Hiking":"hiking","Swimming":"swimming","Animals":"animals","Day trip":"daytrip","Biking":"biking","Indoor play":"indoor","Books":"books"};
+  const TAG_TO_KEY = {"Parks":"park","Big kids":"bigkids","Little kids":"littlekids","Eat":"food","Classes":"classes","Stores":"store","Splash pads":"splashpad","Free":"free","Misc":"misc","Destination playground":"destination","Hiking":"hiking","Swimming":"swimming","Animals":"animals","Day trip":"daytrip","Biking":"biking","Indoor play":"indoor","Books":"books","Summer Seasonal":"summer","Fall Seasonal":"fall","Winter Seasonal":"winter"};
   const tags = (f.Tags||[]).map(t=>TAG_TO_KEY[t]||t.toLowerCase().replace(/\s+/g,""));
   return {
     id: rec.id,          // Airtable record ID
@@ -1263,7 +1269,7 @@ let map, markers = {};
 let zipBarOpen = false;
 let editingId = null;
 let nextId = 20;
-const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free",destination:"Destination playground",hiking:"Hiking",swimming:"Swimming",animals:"Animals",daytrip:"Day trip",biking:"Biking",indoor:"Indoor play",books:"Books"};
+const TAG_LABELS = {park:"Parks",bigkids:"Big kids",littlekids:"Little kids",food:"Eat",classes:"Classes",store:"Stores",splashpad:"Splash pads",misc:"Misc",free:"Free",destination:"Destination playground",hiking:"Hiking",swimming:"Swimming",animals:"Animals",daytrip:"Day trip",biking:"Biking",indoor:"Indoor play",books:"Books",summer:"Summer Seasonal",fall:"Fall Seasonal",winter:"Winter Seasonal"};
 
 // ─── FILTER & MATCH ───────────────────────────────────────────────────────────
 function matches(p){
@@ -1271,7 +1277,7 @@ function matches(p){
   const ms = !q || p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q) || p.tags.some(t=>t.includes(q));
   if(!ms) return false;
   if(activeFilters.has("all")) return true;
-  return p.tags.some(t=>activeFilters.has(t));
+  return [...activeFilters].every(f=>p.tags.includes(f));
 }
 function toggleFilter(f,btn){
   if(f==="all"){activeFilters=new Set(["all"]);}
@@ -1314,12 +1320,13 @@ function sorted(list){
 function starsHtml(r){return "★".repeat(Math.floor(r))+(r%1>=0.5?"½":"")}
 function tagHtml(t){return `<span class="tag tag-${t}">${TAG_LABELS[t]||t}</span>`}
 function pinColor(p){
-  if(p.featured) return "#D4A843";
-  if(p.tags.includes("park")) return "#00897B";
-  if(p.tags.includes("food")) return "#C0392B";
-  if(p.tags.includes("classes")) return "#8E44AD";
-  if(p.tags.includes("bigkids")) return "#1A6FA0";
-  return "#FF6B35";
+  if(p.featured)                                        return "#D4A843"; // gold
+  if(p.tags.includes("park")||p.tags.includes("hiking"))return "#2D6A4F"; // green
+  if(p.tags.includes("classes"))                        return "#8E44AD"; // purple
+  if(p.tags.includes("indoor"))                         return "#E8622A"; // orange
+  if(p.tags.includes("books"))                          return "#2471A3"; // blue
+  if(p.tags.includes("food"))                           return "#C0392B"; // red
+  return "#8E44AD";                                                        // purple (default)
 }
 
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
@@ -1853,7 +1860,7 @@ function renderApPlaces(body){
 
 function renderApForm(body){
   const p=editingId ? PLACES.find(x=>x.id===editingId) : null;
-  const allTags=["park","destination","splashpad","hiking","swimming","animals","daytrip","biking","indoor","books","bigkids","littlekids","food","classes","store","free","misc"];
+  const allTags=["park","destination","splashpad","hiking","swimming","animals","daytrip","biking","indoor","books","bigkids","littlekids","food","classes","store","free","misc","summer","fall","winter"];
   body.innerHTML=`
     <div class="ap-form">
       <h4>${p?"Edit: "+p.name:"Add a new place"}</h4>
@@ -2375,7 +2382,9 @@ const FILTER_DEFS = [
   {f:"books",label:"📚 Books"},{f:"bigkids",label:"🏃 Big kids"},
   {f:"littlekids",label:"👶 Little kids"},{f:"food",label:"🍕 Eat"},
   {f:"classes",label:"🎨 Classes"},{f:"store",label:"🛍 Stores"},
-  {f:"free",label:"🆓 Free"},{f:"misc",label:"✨ Misc"}
+  {f:"free",label:"🆓 Free"},{f:"misc",label:"✨ Misc"},
+  {f:"summer",label:"☀️ Summer Seasonal"},{f:"fall",label:"🍂 Fall Seasonal"},
+  {f:"winter",label:"⛄ Winter Seasonal"}
 ];
 function openMobileFilters(){
   const container = document.getElementById("fsh-pills");
