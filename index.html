@@ -924,9 +924,11 @@ body::before{
   <button class="pill"        data-f="store"       onclick="toggleFilter('store',this)">🛍 Stores</button>
   <button class="pill"        data-f="free"        onclick="toggleFilter('free',this)">🆓 Free</button>
   <button class="pill"        data-f="misc"        onclick="toggleFilter('misc',this)">✨ Misc</button>
+  <!-- Seasonal tags hidden for now — unhide when ready to use
   <button class="pill"        data-f="summer"      onclick="toggleFilter('summer',this)">☀️ Summer Seasonal</button>
   <button class="pill"        data-f="fall"        onclick="toggleFilter('fall',this)">🍂 Fall Seasonal</button>
   <button class="pill"        data-f="winter"      onclick="toggleFilter('winter',this)">⛄ Winter Seasonal</button>
+  -->
   <div class="pill-sep"></div>
   <div style="flex-shrink:0;width:8px"></div>
   <div class="view-btns">
@@ -1879,7 +1881,7 @@ function renderApForm(body){
           {label:"🌿 Nature", emojis:["🌲","🌳","🌴","🌵","🌾","🌿","🍀","🍁","🍂","🌱","🌸","🌺","🌻","🌼","🌷","🍄","🌊","💧","🏞","🏔","⛰","🏕","🏖","🏝","🌅","🌄","🌈","☀️","🌤","⛅","🌧","❄️","⭐","🌙"]},
           {label:"🦅 Animals", emojis:["🐶","🐱","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🦆","🦅","🦉","🐴","🦄","🦋","🐢","🐍","🐙","🐬","🐳","🦈","🐘","🦒","🦌","🐕","🐈","🦜","🕊"]},
           {label:"🍕 Food", emojis:["🍕","🍔","🌮","🥗","🍝","🧁","🎂","🍰","🍦","🍩","🍪","🍫","🍬","🍭","☕","🍵","🧃","🥤","🥞","🍞","🥐","🥨","🧀","🍟","🌽","🥕","🍇","🍎","🍓","🫐","🥝","🍅"]},
-          {label:"⚽ Activities", emojis:["⚽","🏀","🏈","⚾","🎾","🏐","🎱","🏓","🏸","⛳","🎣","🤿","🎿","🛷","🎯","🎮","🎲","🏋","🤸","🏄","🚣","🏊","🚵","🚴","🛹","🛝","🎡","🎢","🎠","🎨","🎵","🎹","🎭","🏆","🥇","🧗","⛷","🏂","🪂","🤼","🥊","🏇","🤺","🥋","🏒","🎿","🛼","🧘","🤾","🏌"]},
+          {label:"⚽ Activities", emojis:["⚽","🏀","🏈","⚾","🎾","🏐","🎱","🏓","🏸","⛳","🎣","🤿","🎿","🛷","🎯","🎮","🎲","🏋","🤸","🏄","🚣","🏊","🚵","🚴","🛹","🛝","🎡","🎢","🎠","🎨","🎵","🎹","🎭","🏆","🥇","🧗","⛷","🏂","🪂","🤼","🥊","🏇","🤺","🥋","🏒","🎿","🛼","🧘","🤾","🏌","🩰","💃","🕺"]},
           {label:"🏫 Places", emojis:["🏠","🏡","🏪","🏫","🏬","🏯","🏰","🏩","💒","🏛","🏟","🏗","⛪","⛲","⛺","🏕","🏖","🗺","🧭","🏔","🌋","🏜","🏝","🏞","🌃","🏙","🌄","🌅","🌆","🌇","🌉","🌁"]},
           {label:"✨ Misc", emojis:["⭐","🌟","✨","💫","🔥","❄️","🌈","🎯","🎁","🎉","🎈","💡","🔑","📍","📌","🚩","🎓","📚","📖","💎","🛒","🎒","🧸","🪆","🔮","🌺","💐"]}
         ].map(group=>`
@@ -2382,9 +2384,9 @@ const FILTER_DEFS = [
   {f:"books",label:"📚 Books"},{f:"bigkids",label:"🏃 Big kids"},
   {f:"littlekids",label:"👶 Little kids"},{f:"food",label:"🍕 Eat"},
   {f:"classes",label:"🎨 Classes"},{f:"store",label:"🛍 Stores"},
-  {f:"free",label:"🆓 Free"},{f:"misc",label:"✨ Misc"},
-  {f:"summer",label:"☀️ Summer Seasonal"},{f:"fall",label:"🍂 Fall Seasonal"},
-  {f:"winter",label:"⛄ Winter Seasonal"}
+  {f:"free",label:"🆓 Free"},{f:"misc",label:"✨ Misc"}
+  // Seasonal tags hidden for now — add back when ready:
+  // {f:"summer",label:"☀️ Summer Seasonal"},{f:"fall",label:"🍂 Fall Seasonal"},{f:"winter",label:"⛄ Winter Seasonal"}
 ];
 function openMobileFilters(){
   const container = document.getElementById("fsh-pills");
